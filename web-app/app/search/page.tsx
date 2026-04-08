@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import { SearchBar, SearchResults } from '@/components/search'
+import { searchService } from '@/lib/api/search-service'
 
 interface SearchResult {
   id: string
@@ -13,6 +14,7 @@ interface SearchResult {
   color?: string
 }
 
+// Fallback mock data when API is not available
 const MOCK_RESULTS: SearchResult[] = [
   {
     id: '1',
@@ -64,15 +66,46 @@ const MOCK_RESULTS: SearchResult[] = [
 export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedType, setSelectedType] = useState<string | null>(null)
+  const [results, setResults] = useState<SearchResult[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  // Filter results based on search query and selected type
-  const filteredResults = useMemo(() => {
-    return MOCK_RESULTS.filter(result => {
-      const matchesQuery = result.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          result.description.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesType = !selectedType || result.type === selectedType
-      return matchesQuery && matchesType
-    })
+  // Fetch search results when query or filters change
+  useEffect(() => {
+    const fetchResults = async () => {
+      if (!searchQuery && !selectedType) {
+        setResults([])
+        return
+      }
+
+      setLoading(true)
+      setError('')
+
+      const response = await searchService.search(searchQuery, {
+        type: selectedType || undefined,
+      })
+
+      if (response.error) {
+        // Fallback to mock data if API fails
+        const filtered = MOCK_RESULTS.filter(result => {
+          const matchesQuery = !searchQuery ||
+            result.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            result.description.toLowerCase().includes(searchQuery.toLowerCase())
+          const matchesType = !selectedType || result.type === selectedType
+          return matchesQuery && matchesType
+        })
+        setResults(filtered)
+        setError('')
+      } else {
+        setResults(response.data || [])
+      }
+
+      setLoading(false)
+    }
+
+    // Debounce search
+    const timer = setTimeout(fetchResults, 300)
+    return () => clearTimeout(timer)
   }, [searchQuery, selectedType])
 
   return (
@@ -98,13 +131,20 @@ export default function SearchPage() {
 
         {/* Results Section */}
         <div className="max-w-4xl">
+          {error && (
+            <div style={{ backgroundColor: '#fee2e2', borderColor: '#fecaca', color: 'var(--color-error)' }} className="p-4 rounded mb-4 border">
+              {error}
+            </div>
+          )}
+
           {searchQuery || selectedType ? (
             <>
               <p style={{ color: 'var(--color-text-tertiary)' }} className="text-sm mb-4">
-                {filteredResults.length} result{filteredResults.length !== 1 ? 's' : ''} found
+                {loading ? 'Searching...' : `${results.length} result${results.length !== 1 ? 's' : ''} found`}
               </p>
               <SearchResults
-                results={filteredResults}
+                results={results}
+                loading={loading}
                 query={searchQuery}
               />
             </>

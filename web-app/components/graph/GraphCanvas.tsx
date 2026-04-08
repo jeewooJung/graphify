@@ -1,9 +1,10 @@
 'use client'
 
-import React, { useRef, useState } from 'react'
+import React, { useRef, useState, useEffect } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrbitControls, Points, PointMaterial } from '@react-three/drei'
+import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
+import { graphService } from '@/lib/api/graph-service'
 
 interface GraphNode {
   id: string
@@ -19,8 +20,14 @@ interface GraphEdge {
   target: string
 }
 
-// Sample graph data
-const SAMPLE_NODES: GraphNode[] = [
+interface GraphCanvasProps {
+  graphId?: string
+  selectedNodeId?: string
+  onSelectNode?: (id: string) => void
+}
+
+// Sample data for when API is not available
+const SAMPLE_NODES = [
   { id: '1', x: 0, y: 0, z: 0, color: '#3366cc', size: 1 },
   { id: '2', x: 3, y: 2, z: 1, color: '#10b981', size: 0.8 },
   { id: '3', x: -3, y: 2, z: 1, color: '#f59e0b', size: 0.8 },
@@ -28,7 +35,7 @@ const SAMPLE_NODES: GraphNode[] = [
   { id: '5', x: 2, y: -2, z: -2, color: '#ef4444', size: 0.7 },
 ]
 
-const SAMPLE_EDGES: GraphEdge[] = [
+const SAMPLE_EDGES = [
   { source: '1', target: '2' },
   { source: '1', target: '3' },
   { source: '1', target: '4' },
@@ -99,10 +106,6 @@ function Edges({ nodes, edges }: { nodes: GraphNode[]; edges: GraphEdge[] }) {
 function CameraController() {
   const { camera } = useThree()
 
-  useFrame(() => {
-    // Camera position set once on mount
-  })
-
   React.useEffect(() => {
     camera.position.z = 12
     camera.lookAt(0, 0, 0)
@@ -111,12 +114,71 @@ function CameraController() {
   return null
 }
 
-interface GraphCanvasProps {
-  selectedNodeId?: string
-  onSelectNode?: (nodeId: string) => void
-}
+export function GraphCanvas({ graphId, selectedNodeId, onSelectNode }: GraphCanvasProps) {
+  const [nodes, setNodes] = useState<GraphNode[]>(SAMPLE_NODES)
+  const [edges, setEdges] = useState<GraphEdge[]>(SAMPLE_EDGES)
+  const [loading, setLoading] = useState(!!graphId)
+  const [error, setError] = useState('')
 
-export function GraphCanvas({ selectedNodeId, onSelectNode }: GraphCanvasProps) {
+  // Fetch graph data from API
+  useEffect(() => {
+    if (!graphId) {
+      setLoading(false)
+      return
+    }
+
+    const fetchData = async () => {
+      setLoading(true)
+      setError('')
+
+      // Fetch nodes
+      const nodesResponse = await graphService.getNodes(graphId)
+      if (nodesResponse.error) {
+        setError(nodesResponse.error)
+        setLoading(false)
+        return
+      }
+
+      // Transform API data to Three.js format
+      const transformedNodes = (nodesResponse.data || []).map((node: any, index: number) => ({
+        id: node.id,
+        x: Math.cos((index / Math.max(nodesResponse.data?.length || 5, 5)) * Math.PI * 2) * 3,
+        y: Math.sin((index / Math.max(nodesResponse.data?.length || 5, 5)) * Math.PI * 2) * 3,
+        z: Math.random() - 0.5,
+        color: node.color || '#3366cc',
+        size: 0.8 + Math.random() * 0.4,
+      }))
+
+      setNodes(transformedNodes.length > 0 ? transformedNodes : SAMPLE_NODES)
+
+      // Fetch edges
+      const edgesResponse = await graphService.getEdges(graphId)
+      if (!edgesResponse.error) {
+        setEdges(edgesResponse.data || SAMPLE_EDGES)
+      }
+
+      setLoading(false)
+    }
+
+    fetchData()
+  }, [graphId])
+
+  if (loading && graphId) {
+    return (
+      <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-surface)' }}>
+        <p style={{ color: 'var(--color-text-tertiary)' }}>Loading graph...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-surface)' }}>
+        <p style={{ color: 'var(--color-error)' }}>Error: {error}</p>
+      </div>
+    )
+  }
+
   return (
     <Canvas camera={{ position: [0, 0, 12], fov: 50 }}>
       <CameraController />
@@ -124,10 +186,10 @@ export function GraphCanvas({ selectedNodeId, onSelectNode }: GraphCanvasProps) 
       <pointLight position={[10, 10, 10]} intensity={0.8} />
 
       {/* Edges */}
-      <Edges nodes={SAMPLE_NODES} edges={SAMPLE_EDGES} />
+      <Edges nodes={nodes} edges={edges} />
 
       {/* Nodes */}
-      {SAMPLE_NODES.map(node => (
+      {nodes.map(node => (
         <Node
           key={node.id}
           node={node}
