@@ -2,6 +2,8 @@
 package com.graphify.backend.exception;
 
 import com.graphify.backend.dto.response.ErrorResponse;
+import com.graphify.backend.dto.response.ValidationError;
+import com.graphify.backend.dto.response.ValidationErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -12,7 +14,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestControllerAdvice
@@ -132,6 +136,44 @@ public class GlobalExceptionHandler {
             request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    /**
+     * Handle validation errors from @Valid annotations.
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ValidationErrorResponse> handleMethodArgumentNotValidException(
+            MethodArgumentNotValidException ex,
+            HttpServletRequest request) {
+        List<ValidationError> errors = new ArrayList<>();
+
+        // Extract field errors
+        ex.getBindingResult().getFieldErrors().forEach(error ->
+            errors.add(new ValidationError(
+                error.getField(),
+                error.getDefaultMessage(),
+                error.getRejectedValue()
+            ))
+        );
+
+        // Extract global errors
+        ex.getBindingResult().getGlobalErrors().forEach(error ->
+            errors.add(new ValidationError(
+                error.getObjectName(),
+                error.getDefaultMessage(),
+                null
+            ))
+        );
+
+        ValidationErrorResponse errorResponse = new ValidationErrorResponse(
+            HttpStatus.BAD_REQUEST.value(),
+            "Validation Failed",
+            String.format("Validation failed for %d field(s)", errors.size()),
+            request.getRequestURI(),
+            errors
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
     /**
