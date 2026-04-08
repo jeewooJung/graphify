@@ -19,3 +19,13 @@ graphify-out/
 .claude/
 skills/
 docs/superpowers/
+
+# Java/Gradle
+backend/.gradle/
+backend/build/
+backend/.classpath
+backend/.project
+backend/.settings/
+backend/*.iml
+backend/.idea/
+.DS_Store
