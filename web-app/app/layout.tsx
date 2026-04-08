@@ -1,5 +1,8 @@
+'use client'
+
 import type { Metadata } from "next";
 import { Inter, Fira_Code } from "next/font/google";
+import { UserProvider } from "@/lib/auth/user-context";
 import "./globals.css";
 
 const inter = Inter({
@@ -27,7 +30,11 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${firaCode.variable} h-full antialiased`}
     >
-      <body className="min-h-screen bg-white text-text-primary">{children}</body>
+      <body className="min-h-screen bg-white text-text-primary">
+        <UserProvider>
+          {children}
+        </UserProvider>
+      </body>
     </html>
   );
 }
