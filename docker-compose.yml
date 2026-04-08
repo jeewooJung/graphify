@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: graphify-postgres
+    environment:
+      POSTGRES_USER: graphify_user
+      POSTGRES_PASSWORD: graphify123
+      POSTGRES_DB: graphify
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U graphify_user -d graphify"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - graphify-postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7.4
+    container_name: graphify-redis
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - graphify-redis-data:/data
+
+  neo4j:
+    image: neo4j:5.17
+    container_name: graphify-neo4j
+    environment:
+      NEO4J_AUTH: neo4j/neo4j
+      NEO4J_PLUGINS: '["graph-data-science"]'
+    ports:
+      - "7687:7687"
+      - "7474:7474"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:7474"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - graphify-neo4j-data:/var/lib/neo4j/data
+
+volumes:
+  graphify-postgres-data:
+  graphify-redis-data:
+  graphify-neo4j-data:

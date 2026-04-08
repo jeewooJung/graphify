@@ -4,7 +4,7 @@ spring:
     version: 0.1.0
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/graphify
+    url: jdbc:postgresql://localhost:5433/graphify
     username: graphify_user
     password: ${DB_PASSWORD:graphify123}
     hikari:
@@ -14,11 +14,11 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: create
     show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQL10Dialect
+        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
         jdbc:
           batch_size: 20
@@ -27,7 +27,7 @@ spring:
 
   redis:
     host: localhost
-    port: 6379
+    port: 6380
     password: ${REDIS_PASSWORD:redis123}
     timeout: 2000ms
     jedis:
