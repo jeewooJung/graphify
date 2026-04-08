@@ -7,6 +7,9 @@ import com.graphify.backend.entity.User;
 import com.graphify.backend.entity.enums.UserRole;
 import com.graphify.backend.repository.UserRepository;
 import com.graphify.backend.dto.response.UserDTO;
+import com.graphify.backend.dto.request.UpdateUserRequest;
+import com.graphify.backend.dto.response.UserDetailDTO;
+import java.util.List;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -69,5 +72,26 @@ public class UserService {
         User user = getUserById(userId);
         user.setIsActive(false);
         userRepository.save(user);
+    }
+
+    public User updateUser(Long userId, UpdateUserRequest request) {
+        User user = getUserById(userId);
+        if (request.getDisplayName() != null) {
+            user.setDisplayName(request.getDisplayName());
+        }
+        if (request.getEmail() != null) {
+            user.setEmail(request.getEmail());
+        }
+        return userRepository.save(user);
+    }
+
+    public void deleteUser(Long userId) {
+        User user = getUserById(userId);
+        user.setIsActive(false);
+        userRepository.save(user);
+    }
+
+    public UserDetailDTO getUserDetailById(Long userId) {
+        return UserDetailDTO.fromEntity(getUserById(userId));
     }
 }

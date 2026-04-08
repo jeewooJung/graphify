@@ -120,4 +120,20 @@ public class PermissionService {
                (teamMember.get().getRole().equals("TEAM_LEAD") ||
                 user.getRole() == UserRole.TEAM_LEAD);
     }
+
+    public boolean canViewUser(Long userId, Long requesterId) {
+        User requester = userRepository.findById(requesterId).orElseThrow();
+        if (requester.getRole() == UserRole.ADMIN) {
+            return true;
+        }
+        return userId.equals(requesterId);
+    }
+
+    public boolean canEditUser(Long userId, Long requesterId) {
+        User requester = userRepository.findById(requesterId).orElseThrow();
+        if (requester.getRole() == UserRole.ADMIN) {
+            return true;
+        }
+        return userId.equals(requesterId);
+    }
 }
