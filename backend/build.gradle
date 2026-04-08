@@ -35,6 +35,7 @@ dependencies {
     // Utility
     implementation 'org.projectlombok:lombok:1.18.30'
     implementation 'com.google.guava:guava:32.1.3-jre'
+    implementation 'io.hypersistence:hypersistence-utils-hibernate-63:3.7.0'
 
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
