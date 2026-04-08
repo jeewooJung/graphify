@@ -1,11 +1,17 @@
 'use client'
 
 import React from 'react'
+import { GraphCanvas } from './GraphCanvas'
 
-export function GraphVisualization() {
+interface GraphVisualizationProps {
+  selectedNodeId?: string
+  onSelectNode?: (nodeId: string) => void
+}
+
+export function GraphVisualization({ selectedNodeId, onSelectNode }: GraphVisualizationProps) {
   return (
-    <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-surface)' }}>
-      <p style={{ color: 'var(--color-text-tertiary)' }}>Graph Canvas (React Three Fiber)</p>
+    <div className="w-full h-full">
+      <GraphCanvas selectedNodeId={selectedNodeId} onSelectNode={onSelectNode} />
     </div>
   )
 }

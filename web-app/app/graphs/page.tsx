@@ -20,7 +20,10 @@ export default function GraphsPage() {
 
       {/* Center Panel - Graph Canvas (flexible) */}
       <div className="flex-1 overflow-hidden">
-        <GraphVisualization />
+        <GraphVisualization
+          selectedNodeId={selectedNodeId}
+          onSelectNode={setSelectedNodeId}
+        />
       </div>
 
       {/* Right Panel - Properties (400px) */}
