@@ -37,7 +37,7 @@ server:
     include-exception: false
 
 jwt:
-  secret: ${JWT_SECRET:your-secret-key-change-in-production}
+  secret: ${JWT_SECRET:zZAR3iS9NAnzj56wrQKqqMFqD1OZWQOoRx0kuee7p9k}
   expiration: ${JWT_EXPIRATION:3600000}
 
 ollama:
