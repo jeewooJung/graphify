@@ -22,7 +22,7 @@ Timeout:  5000ms
 Call log:
   - Expect "toBeVisible" with timeout 5000ms
   - waiting for locator('input[type="text"], input[placeholder*="search" i]').first()
-    8 × locator resolved to <input type="text" placeholder="Search..." class="w-full h-9 pl-9 pr-3 rounded-md bg-surface border border-border text-sm text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-150"/>
+    9 × locator resolved to <input type="text" placeholder="Search..." class="w-full h-9 pl-9 pr-3 rounded-md bg-surface border border-border text-sm text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-150"/>
       - unexpected value "hidden"
 
 ```

@@ -101,14 +101,17 @@ public class SecurityConfig {
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
-                // Public endpoints
-                .requestMatchers("/api/health/**").permitAll()
-                .requestMatchers("/api/health/check").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/auth/validate").permitAll()
-                .requestMatchers("/api/public/**").permitAll()
-                // Ollama health check (no auth required)
-                .requestMatchers("/api/ollama/health").permitAll()
+                // Health check endpoints (public)
+                .requestMatchers("/health/check", "/health/info").permitAll()
+                // Auth endpoints (public)
+                .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/logout").permitAll()
+                .requestMatchers(HttpMethod.GET, "/auth/validate").permitAll()
+                // User registration (public)
+                .requestMatchers(HttpMethod.POST, "/users/register").permitAll()
+                // Ollama health check (public)
+                .requestMatchers("/ollama/health").permitAll()
+                // Public endpoints (fallback)
+                .requestMatchers("/public/**").permitAll()
                 // All other requests require authentication
                 .anyRequest().authenticated())
             .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
