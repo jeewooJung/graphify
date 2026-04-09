@@ -30,3 +30,5 @@ backend/*.iml
 backend/.idea/
 .DS_Store
 /web-app/playwright-report/
+/.idea/
+/web-app/test-results/

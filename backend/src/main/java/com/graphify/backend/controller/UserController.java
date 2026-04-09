@@ -49,7 +49,7 @@ public class UserController {
         return ResponseEntity.ok(user);
     }
 
-    @GetMapping
+    @GetMapping({"", "/"})
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<UserDetailDTO>> getAllUsers() {
         List<UserDetailDTO> users = userService.getAllUsers().stream()

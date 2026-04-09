@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.graphify.backend.entity.User;
 import com.graphify.backend.entity.enums.UserRole;
+import com.graphify.backend.exception.DuplicateResourceException;
 import com.graphify.backend.repository.UserRepository;
 import com.graphify.backend.dto.response.UserDTO;
 import com.graphify.backend.dto.request.UpdateUserRequest;
@@ -27,6 +28,12 @@ public class UserService {
     }
 
     public User createUser(String username, String email, String password, UserRole role) {
+        if (userRepository.existsByEmail(email)) {
+            throw new DuplicateResourceException("Email already exists: " + email);
+        }
+        if (userRepository.existsByUsername(username)) {
+            throw new DuplicateResourceException("Username already exists: " + username);
+        }
         User user = User.builder()
             .username(username)
             .email(email)

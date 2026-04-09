@@ -1,5 +1,7 @@
 package com.graphify.backend.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class LoginResponse {
     private String token;
     private String tokenType;
@@ -8,6 +10,16 @@ public class LoginResponse {
     private String email;
     private String role;
     private Long expiresIn;
+
+    @JsonProperty("type")
+    public String getType() {
+        return tokenType;
+    }
+
+    @JsonProperty("id")
+    public Long getId() {
+        return userId;
+    }
 
     public LoginResponse() {
         this.tokenType = "Bearer";

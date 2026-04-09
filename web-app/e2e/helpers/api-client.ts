@@ -23,37 +23,60 @@ export class ApiClient {
     return headers;
   }
 
+  private buildUrl(path: string): string {
+    // Normalize: if path starts with /api and API_BASE_URL ends with /api, strip /api from path
+    if (API_BASE_URL.endsWith('/api') && path.startsWith('/api/')) {
+      return `${API_BASE_URL}${path.substring(4)}`;
+    }
+    return `${API_BASE_URL}${path}`;
+  }
+
   async get<T>(path: string): Promise<{ status: number; data: T }> {
-    const response = await this.request.get(`${API_BASE_URL}${path}`, {
+    const response = await this.request.get(this.buildUrl(path), {
       headers: this.getHeaders(),
     });
 
-    const data = await response.json();
+    let data: any;
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
     return { status: response.status(), data };
   }
 
   async post<T>(path: string, body: any): Promise<{ status: number; data: T }> {
-    const response = await this.request.post(`${API_BASE_URL}${path}`, {
+    const response = await this.request.post(this.buildUrl(path), {
       headers: this.getHeaders(),
       data: body,
     });
 
-    const data = await response.json();
+    let data: any;
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
     return { status: response.status(), data };
   }
 
   async put<T>(path: string, body: any): Promise<{ status: number; data: T }> {
-    const response = await this.request.put(`${API_BASE_URL}${path}`, {
+    const response = await this.request.put(this.buildUrl(path), {
       headers: this.getHeaders(),
       data: body,
     });
 
-    const data = await response.json();
+    let data: any;
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
     return { status: response.status(), data };
   }
 
   async delete<T>(path: string): Promise<{ status: number; data: T }> {
-    const response = await this.request.delete(`${API_BASE_URL}${path}`, {
+    const response = await this.request.delete(this.buildUrl(path), {
       headers: this.getHeaders(),
     });
 

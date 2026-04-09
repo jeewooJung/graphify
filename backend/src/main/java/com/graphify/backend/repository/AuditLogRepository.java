@@ -14,5 +14,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
     List<AuditLog> findByResourceTypeAndResourceId(String resourceType, String resourceId);
 
+    List<AuditLog> findByAction(String action);
+
     List<AuditLog> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 }

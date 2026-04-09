@@ -2,6 +2,7 @@ package com.graphify.backend.service;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -30,14 +31,19 @@ public class AuthenticationService {
     }
 
     public LoginResponse authenticate(LoginRequest loginRequest) {
-        var user = userService.getUserByUsername(loginRequest.getUsername());
+        com.graphify.backend.entity.User user;
+        try {
+            user = userService.getUserByUsername(loginRequest.getUsername());
+        } catch (RuntimeException e) {
+            throw new BadCredentialsException("Invalid credentials");
+        }
 
         if (!user.isActive()) {
-            throw new RuntimeException("User account is deactivated");
+            throw new BadCredentialsException("User account is deactivated");
         }
 
         if (!userService.validatePassword(loginRequest.getPassword(), user.getPasswordHash())) {
-            throw new RuntimeException("Invalid username or password");
+            throw new BadCredentialsException("Invalid credentials");
         }
 
         // Update last login
