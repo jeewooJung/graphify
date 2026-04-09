@@ -31,10 +31,10 @@ test.describe('Public Endpoints', () => {
     expect([200, 503]).toContain(status);
   });
 
-  test('P-04: Protected endpoint without auth returns 401', async () => {
-    const request = (test as any).request || this.request;
-    const response = await (request as any).get(`${API_BASE_URL}/audit-logs`);
+  test('P-04: Protected endpoint without auth returns 401', async ({ request }) => {
+    const publicApiClient = new ApiClient(request);
+    const { status } = await publicApiClient.get('/api/audit-logs');
 
-    expect(response.status()).toBe(401);
+    expect(status).toBe(401);
   });
 });
