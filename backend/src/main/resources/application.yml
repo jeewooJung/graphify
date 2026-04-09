@@ -26,7 +26,15 @@ spring:
 server:
   port: 8086
   servlet:
-    context-path: /api
+    context-path: /
+  compression:
+    enabled: true
+    min-response-size: 1024
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: on_param
+    include-exception: false
 
 jwt:
   secret: ${JWT_SECRET:your-secret-key-change-in-production}
