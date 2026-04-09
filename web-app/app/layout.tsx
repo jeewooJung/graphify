@@ -1,5 +1,3 @@
-'use client'
-
 import type { Metadata } from "next";
 import { Inter, Fira_Code } from "next/font/google";
 import { UserProvider } from "@/lib/auth/user-context";

@@ -29,3 +29,4 @@ backend/.settings/
 backend/*.iml
 backend/.idea/
 .DS_Store
+/web-app/playwright-report/

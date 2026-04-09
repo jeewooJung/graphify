@@ -31,7 +31,7 @@ public class UserService {
             .username(username)
             .email(email)
             .passwordHash(passwordEncoder.encode(password))
-            .role(role)
+            .role(role != null ? role : UserRole.MEMBER)
             .isActive(true)
             .build();
 
