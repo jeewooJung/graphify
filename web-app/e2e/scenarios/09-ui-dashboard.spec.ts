@@ -43,7 +43,7 @@ test.describe('UI - Dashboard Page', () => {
 
     const navLinks = ['Dashboard', 'Graphs', 'Search', 'Team', 'Projects', 'Permissions'];
     for (const link of navLinks) {
-      const navItem = await page.locator(`text=${link}`);
+      const navItem = page.getByRole('link', { name: link }).first();
       await expect(navItem).toBeVisible();
     }
   });

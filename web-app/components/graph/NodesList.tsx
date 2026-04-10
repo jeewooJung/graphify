@@ -59,7 +59,7 @@ export function NodesList({ selectedNodeId, onSelectNode }: NodesListProps) {
   })
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="nodes-list-panel w-full h-full flex flex-col" role="region" aria-label="Nodes List">
       {/* Header */}
       <div style={{ borderBottom: '1px solid var(--color-border)' }} className="p-4">
         <h2 style={{ color: 'var(--color-text-primary)' }} className="text-lg font-semibold mb-3">Nodes</h2>

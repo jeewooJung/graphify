@@ -44,7 +44,8 @@ export default defineConfig({
       name: 'ui',
       testMatch: /0[9-9]-.*\.spec\.ts|1[0-9]-.*\.spec\.ts/,
       use: {
-        ...devices['chromium'],
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1440, height: 900 },
       },
     },
   ],

@@ -44,7 +44,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
       </div>
 
       {/* Search Bar */}
-      <div className="hidden md:flex flex-1 max-w-xs mx-6 relative">
+      <div className="flex flex-1 max-w-xs mx-6 relative">
         <Search
           size={16}
           className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary"
