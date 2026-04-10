@@ -7,6 +7,7 @@
 연계 문서:
 
 - `docs/2026-04-10-knowledgebase-chat-wireframes.md`: 화면별 와이어프레임, 진입점, 상태, 상호작용 상세
+- `docs/2026-04-10-knowledgebase-chat-handoff-and-next-steps.md`: 다음 세션용 요약과 후속 작업 계획
 
 ## 1. 배경
 
