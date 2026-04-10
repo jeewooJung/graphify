@@ -1,47 +1,28 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useState } from 'react'
+import type { User } from './users'
 
-export interface User {
-  id: string
-  email: string
-  name: string
-  role: 'admin' | 'editor' | 'viewer'
-}
+export type { User } from './users'
 
 interface UserContextType {
   user: User | null
   loading: boolean
+  setUser: React.Dispatch<React.SetStateAction<User | null>>
   logout: () => Promise<void>
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined)
 
-export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  // Validate session on mount
-  useEffect(() => {
-    const validateSession = async () => {
-      try {
-        const res = await fetch('/api/auth/validate', {
-          credentials: 'include',
-        })
-
-        if (res.ok) {
-          const data = await res.json()
-          setUser(data.user)
-        }
-      } catch (err) {
-        console.error('Session validation failed:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    validateSession()
-  }, [])
+export function UserProvider({
+  children,
+  initialUser = null,
+}: {
+  children: React.ReactNode
+  initialUser?: User | null
+}) {
+  const [user, setUser] = useState<User | null>(initialUser)
+  const [loading] = useState(false)
 
   const logout = async () => {
     try {
@@ -56,7 +37,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <UserContext.Provider value={{ user, loading, logout }}>
+    <UserContext.Provider value={{ user, loading, setUser, logout }}>
       {children}
     </UserContext.Provider>
   )

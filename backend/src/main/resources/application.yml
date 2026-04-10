@@ -14,7 +14,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
@@ -27,7 +27,7 @@ spring:
 
   redis:
     host: localhost
-    port: 6380
+    port: 6379
     password: ${REDIS_PASSWORD:Dodzjtm26!@redis}
     database: 3
     timeout: 2000ms
@@ -43,9 +43,9 @@ spring:
       expiration: 3600000  # 1 hour in milliseconds
 
   neo4j:
-    uri: bolt://localhost:7687
+    uri: ${NEO4J_URI:bolt://localhost:7687}
     authentication:
-      username: neo4j
+      username: ${NEO4J_USERNAME:neo4j}
       password: ${NEO4J_PASSWORD:neo4j}
 
 server:

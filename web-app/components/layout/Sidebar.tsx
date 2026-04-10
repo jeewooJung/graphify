@@ -5,7 +5,9 @@ import clsx from 'clsx'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui'
+import { useUser } from '@/lib/auth/user-context'
 import {
+  ChevronDown,
   FolderOpen,
   LayoutDashboard,
   Lock,
@@ -47,8 +49,17 @@ function NavItem({ href, icon, label, isActive }: NavItemProps) {
 
 export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const pathname = usePathname()
+  const { user } = useUser()
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
+  const initials = user?.name
+    ?.split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || 'GU'
+  const userName = user?.name || 'Guest user'
+  const userMeta = user?.email || 'Authentication pending'
 
   return (
     <>
@@ -69,21 +80,48 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
           className="flex h-full flex-col border-r border-border px-3 pb-4 pt-3"
           style={{ backgroundColor: 'var(--app-sidebar)' }}
         >
-          <div className="mb-5 flex items-center justify-between gap-2 px-1">
-            <Link href="/dashboard" className="flex min-w-0 items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-500 text-[11px] font-semibold text-white">
-                JJ
-              </div>
+          <div className="mb-5 rounded-2xl border border-border bg-white/88 p-2 shadow-card">
+            <div className="flex items-center justify-between gap-2">
+              <Link href="/dashboard" className="flex min-w-0 flex-1 items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-500 text-[11px] font-semibold text-white">
+                  {initials}
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate text-[13px] font-medium text-text-primary">
+                    {userName}
+                  </div>
+                  <div className="truncate text-[11px] text-text-tertiary">
+                    {userMeta}
+                  </div>
+                </div>
+              </Link>
+
+              <button
+                type="button"
+                className="hidden h-8 w-8 items-center justify-center rounded-lg text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-primary md:flex"
+              >
+                <ChevronDown size={14} />
+              </button>
+            </div>
+
+            <div className="mt-2 flex items-center justify-between rounded-xl bg-surface-hover px-2.5 py-2">
               <div className="min-w-0">
-                <div className="truncate text-[13px] font-medium text-text-primary">jjw</div>
-                <div className="text-[11px] text-text-tertiary">Graph intelligence</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-text-tertiary">
+                  Role
+                </div>
+                <div className="truncate text-[12px] font-medium capitalize text-text-primary">
+                  {user?.role || 'viewer'}
+                </div>
               </div>
-            </Link>
+              <div className="text-[11px] text-text-tertiary">
+                Graph intelligence
+              </div>
+            </div>
 
             <button
               type="button"
               onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-white text-text-secondary md:hidden"
+              className="mt-2 flex h-8 w-full items-center justify-center rounded-lg border border-border bg-white text-[12px] font-medium text-text-secondary md:hidden"
             >
               <X size={14} />
             </button>
@@ -161,7 +199,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
             </div>
           </nav>
 
-          <div className="mt-6 rounded-2xl border border-border bg-white/86 p-3 shadow-card">
+          <div className="mt-6 rounded-2xl border border-border bg-white/88 p-3 shadow-card">
             <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-text-tertiary">
               Current workspace
             </div>

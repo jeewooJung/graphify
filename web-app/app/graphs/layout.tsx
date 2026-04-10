@@ -1,7 +1,5 @@
-'use client'
-
 import React from 'react'
-import { AppShell } from '@/components/layout'
+import { ProtectedAppShell } from '@/components/auth/ProtectedAppShell'
 
 export default function GraphsLayout({
   children,
@@ -9,6 +7,6 @@ export default function GraphsLayout({
   children: React.ReactNode
 }) {
   return (
-    <AppShell mainClassName="overflow-hidden">{children}</AppShell>
+    <ProtectedAppShell mainClassName="overflow-hidden">{children}</ProtectedAppShell>
   )
 }

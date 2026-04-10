@@ -60,6 +60,17 @@ public class TeamController {
         return ResponseEntity.ok(teams);
     }
 
+    @GetMapping("/current")
+    public ResponseEntity<Map<String, Object>> getCurrentTeam(Authentication auth) {
+        Team currentTeam = resolveCurrentTeam(auth);
+
+        if (currentTeam == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(toMap(currentTeam));
+    }
+
     @GetMapping("/{teamId}")
     public ResponseEntity<Map<String, Object>> getTeam(@PathVariable Long teamId) {
         Team team = teamRepository.findById(teamId).orElse(null);
@@ -130,15 +141,22 @@ public class TeamController {
 
     @GetMapping("/{teamId}/members")
     public ResponseEntity<List<Map<String, Object>>> getMembers(@PathVariable Long teamId) {
-        List<Map<String, Object>> members = teamMemberRepository.findAll().stream()
-            .filter(m -> m.getTeam().getId().equals(teamId))
-            .map(m -> {
-                Map<String, Object> map = new HashMap<>();
-                map.put("id", m.getId());
-                map.put("userId", m.getUser().getId());
-                map.put("username", m.getUser().getUsername());
-                return map;
-            })
+        List<Map<String, Object>> members = teamMemberRepository.findByTeamId(teamId).stream()
+            .map(this::toMemberMap)
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(members);
+    }
+
+    @GetMapping("/current/members")
+    public ResponseEntity<List<Map<String, Object>>> getCurrentMembers(Authentication auth) {
+        Team currentTeam = resolveCurrentTeam(auth);
+
+        if (currentTeam == null) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        List<Map<String, Object>> members = teamMemberRepository.findByTeamId(currentTeam.getId()).stream()
+            .map(this::toMemberMap)
             .collect(Collectors.toList());
         return ResponseEntity.ok(members);
     }
@@ -163,6 +181,34 @@ public class TeamController {
         map.put("description", team.getDescription());
         map.put("isActive", team.isActive());
         map.put("createdAt", team.getCreatedAt());
+        map.put("memberCount", teamMemberRepository.findByTeamId(team.getId()).size());
         return map;
+    }
+
+    private Map<String, Object> toMemberMap(TeamMember member) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", member.getUser().getId());
+        map.put("membershipId", member.getId());
+        map.put("userId", member.getUser().getId());
+        map.put("username", member.getUser().getUsername());
+        map.put("displayName", member.getUser().getDisplayName());
+        map.put("email", member.getUser().getEmail());
+        map.put("role", member.getRole());
+        map.put("joinedAt", member.getJoinedAt());
+        map.put("status", member.getUser().isActive() ? "active" : "inactive");
+        return map;
+    }
+
+    private Team resolveCurrentTeam(Authentication auth) {
+        UserPrincipal principal = (UserPrincipal) auth.getPrincipal();
+
+        return teamMemberRepository.findByUserId(principal.getId()).stream()
+            .map(TeamMember::getTeam)
+            .filter(Team::isActive)
+            .findFirst()
+            .orElseGet(() -> teamRepository.findAll().stream()
+                .filter(Team::isActive)
+                .findFirst()
+                .orElse(null));
     }
 }

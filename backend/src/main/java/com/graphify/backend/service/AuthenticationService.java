@@ -64,6 +64,7 @@ public class AuthenticationService {
             .tokenType("Bearer")
             .userId(user.getId())
             .username(user.getUsername())
+            .displayName(user.getDisplayName())
             .email(user.getEmail())
             .role(user.getRole().toString())
             .expiresIn(jwtExpiration / 1000) // Convert to seconds
@@ -81,6 +82,7 @@ public class AuthenticationService {
         return LoginResponse.builder()
             .userId(user.getId())
             .username(user.getUsername())
+            .displayName(user.getDisplayName())
             .email(user.getEmail())
             .role(user.getRole().toString())
             .build();

@@ -1,53 +1,54 @@
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
-
-// Mock user database
-const USERS = [
-  {
-    id: '1',
-    email: 'demo@graphify.com',
-    password: 'demo123',
-    name: 'Demo User',
-    role: 'admin' as const,
-  },
-]
+import { BACKEND_API_URL } from '@/lib/api/backend-url'
+import { AUTH_TOKEN_COOKIE } from '@/lib/auth/session'
+import { normalizeBackendUser } from '@/lib/auth/users'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    const { email, username, password } = await request.json()
+    const loginId = username || email
 
-    // Validate input
-    if (!email || !password) {
+    if (!loginId || !password) {
       return NextResponse.json(
-        { message: 'Email and password required' },
+        { message: 'Email/username and password required' },
         { status: 400 }
       )
     }
 
-    // Find user (in production, query database)
-    const user = USERS.find(u => u.email === email && u.password === password)
+    const backendResponse = await fetch(`${BACKEND_API_URL}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username: loginId,
+        password,
+      }),
+      cache: 'no-store',
+    })
 
-    if (!user) {
+    const payload = await backendResponse.json().catch(() => null)
+
+    if (!backendResponse.ok || !payload?.token) {
       return NextResponse.json(
-        { message: 'Invalid email or password' },
-        { status: 401 }
+        { message: payload?.message || 'Login failed' },
+        { status: backendResponse.status || 500 }
       )
     }
 
-    // Create session cookie
+    const user = normalizeBackendUser(payload)
     const cookieStore = await cookies()
-    cookieStore.set('sessionId', user.id, {
+    cookieStore.set(AUTH_TOKEN_COOKIE, payload.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: Number(payload.expiresIn ?? 3600),
       path: '/',
     })
 
-    // Return user data (without password)
-    const { password: _, ...userWithoutPassword } = user
-    return NextResponse.json({ user: userWithoutPassword })
-  } catch (error) {
+    return NextResponse.json({ user })
+  } catch {
     return NextResponse.json(
       { message: 'Internal server error' },
       { status: 500 }

@@ -1,43 +1,40 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-
-// Mock user database
-const USERS = [
-  {
-    id: '1',
-    email: 'demo@graphify.com',
-    password: 'demo123',
-    name: 'Demo User',
-    role: 'admin' as const,
-  },
-]
+import { BACKEND_API_URL } from '@/lib/api/backend-url'
+import { AUTH_TOKEN_COOKIE } from '@/lib/auth/session'
+import { normalizeBackendUser } from '@/lib/auth/users'
 
 export async function GET() {
   try {
     const cookieStore = await cookies()
-    const sessionId = cookieStore.get('sessionId')?.value
+    const authToken = cookieStore.get(AUTH_TOKEN_COOKIE)?.value
 
-    if (!sessionId) {
+    if (!authToken) {
       return NextResponse.json(
         { message: 'Not authenticated' },
         { status: 401 }
       )
     }
 
-    // Find user by session ID
-    const user = USERS.find(u => u.id === sessionId)
+    const backendResponse = await fetch(`${BACKEND_API_URL}/auth/validate`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+      },
+      cache: 'no-store',
+    })
 
-    if (!user) {
+    if (!backendResponse.ok) {
+      cookieStore.delete(AUTH_TOKEN_COOKIE)
       return NextResponse.json(
-        { message: 'User not found' },
+        { message: 'Not authenticated' },
         { status: 401 }
       )
     }
 
-    // Return user data (without password)
-    const { password: _, ...userWithoutPassword } = user
-    return NextResponse.json({ user: userWithoutPassword })
-  } catch (error) {
+    const payload = await backendResponse.json()
+    return NextResponse.json({ user: normalizeBackendUser(payload) })
+  } catch {
     return NextResponse.json(
       { message: 'Validation failed' },
       { status: 500 }

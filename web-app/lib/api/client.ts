@@ -10,7 +10,7 @@ interface ApiResponse<T> {
   status: number
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+const API_BASE_URL = '/api/backend'
 
 export async function apiCall<T>(
   endpoint: string,
@@ -26,15 +26,18 @@ export async function apiCall<T>(
     const response = await fetch(url, {
       ...options,
       headers,
-      credentials: 'include', // Include cookies for auth
+      credentials: 'include',
     })
 
-    const data = await response.json()
+    const contentType = response.headers.get('content-type') || ''
+    const data = contentType.includes('application/json')
+      ? await response.json()
+      : await response.text()
 
     if (!response.ok) {
       return {
         data: null as any,
-        error: data.message || `API Error: ${response.status}`,
+        error: (typeof data === 'object' && data?.message) || `API Error: ${response.status}`,
         status: response.status,
       }
     }

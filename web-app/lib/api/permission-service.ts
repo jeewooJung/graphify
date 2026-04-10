@@ -12,7 +12,29 @@ export interface Permission {
 
 export const permissionService = {
   async getPermissions() {
-    return api.get<Permission[]>('/permissions')
+    const response = await api.get<any[]>('/permissions')
+
+    if (response.error || !response.data) {
+      return {
+        ...response,
+        data: [],
+      }
+    }
+
+    return {
+      ...response,
+      data: response.data.map((permission) => ({
+        id: String(permission.id),
+        role: permission.role,
+        resource: permission.resource,
+        action: permission.action,
+        description: permission.description,
+        grantedTo: Array.isArray(permission.grantedTo) ? permission.grantedTo : [],
+        createdDate: permission.createdDate
+          ? new Date(permission.createdDate).toLocaleDateString('en-CA')
+          : '-',
+      })) as Permission[],
+    }
   },
 
   async getRolePermissions(role: string) {

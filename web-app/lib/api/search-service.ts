@@ -25,7 +25,30 @@ export const searchService = {
     if (filters?.limit) params.append('limit', filters.limit.toString())
 
     const endpoint = `/search?${params.toString()}`
-    return api.get<SearchResult[]>(endpoint)
+    const response = await api.get<any[]>(endpoint)
+
+    if (response.error || !response.data) {
+      return {
+        ...response,
+        data: [],
+      }
+    }
+
+    return {
+      ...response,
+      data: response.data.map((result) => ({
+        id: String(result.id),
+        title: result.title,
+        description: result.description || '',
+        type: result.type,
+        connections: result.connections ? Number(result.connections) : undefined,
+        lastUpdated: result.lastUpdated
+          ? new Date(result.lastUpdated).toLocaleDateString('en-CA')
+          : undefined,
+        color: result.color,
+        graphId: result.graphId ? String(result.graphId) : undefined,
+      })) as SearchResult[],
+    }
   },
 
   // Search nodes in specific graph

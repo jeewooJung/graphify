@@ -3,66 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { SearchBar, SearchResults } from '@/components/search'
 import { PageHeader } from '@/components/ui'
-import { searchService } from '@/lib/api/search-service'
-
-interface SearchResult {
-  id: string
-  title: string
-  description: string
-  type: 'entity' | 'concept' | 'relation' | 'graph'
-  connections?: number
-  lastUpdated?: string
-  color?: string
-}
-
-// Fallback mock data when API is not available
-const MOCK_RESULTS: SearchResult[] = [
-  {
-    id: '1',
-    title: 'Product',
-    description: 'Entity representing a product in the system',
-    type: 'entity',
-    connections: 12,
-    lastUpdated: '2024-04-08',
-    color: '#3366cc',
-  },
-  {
-    id: '2',
-    title: 'User Management System',
-    description: 'Graph containing all user-related entities and relationships',
-    type: 'graph',
-    connections: 25,
-    lastUpdated: '2024-04-07',
-    color: '#10b981',
-  },
-  {
-    id: '3',
-    title: 'has_feature',
-    description: 'Relationship indicating a product has a feature',
-    type: 'relation',
-    connections: 15,
-    lastUpdated: '2024-04-06',
-    color: '#f59e0b',
-  },
-  {
-    id: '4',
-    title: 'Architecture',
-    description: 'Concept representing system architecture and design patterns',
-    type: 'concept',
-    connections: 8,
-    lastUpdated: '2024-04-05',
-    color: '#8b5cf6',
-  },
-  {
-    id: '5',
-    title: 'Customer',
-    description: 'Entity representing customer information',
-    type: 'entity',
-    connections: 20,
-    lastUpdated: '2024-04-04',
-    color: '#3366cc',
-  },
-]
+import { searchService, type SearchResult } from '@/lib/api/search-service'
 
 export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -87,16 +28,8 @@ export default function SearchPage() {
       })
 
       if (response.error) {
-        // Fallback to mock data if API fails
-        const filtered = MOCK_RESULTS.filter(result => {
-          const matchesQuery = !searchQuery ||
-            result.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            result.description.toLowerCase().includes(searchQuery.toLowerCase())
-          const matchesType = !selectedType || result.type === selectedType
-          return matchesQuery && matchesType
-        })
-        setResults(filtered)
-        setError('')
+        setResults([])
+        setError(response.error)
       } else {
         setResults(response.data || [])
       }
@@ -137,7 +70,7 @@ export default function SearchPage() {
               <div className="panel-heading">Results</div>
               <p className="mt-1 text-sm leading-6 text-text-secondary">
                 {searchQuery || selectedType
-                  ? 'Matched against local fallback data or the connected search service.'
+                  ? 'Matched against the live workspace data indexed by the backend.'
                   : 'Start with a term or filter to surface relevant graph entries.'}
               </p>
             </div>

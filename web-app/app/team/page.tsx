@@ -15,35 +15,8 @@ interface TeamMember {
   status: 'active' | 'inactive'
 }
 
-const MOCK_MEMBERS: TeamMember[] = [
-  {
-    id: '1',
-    name: 'Alice Johnson',
-    email: 'alice@graphify.com',
-    role: 'admin',
-    joinedDate: '2024-01-15',
-    status: 'active',
-  },
-  {
-    id: '2',
-    name: 'Bob Smith',
-    email: 'bob@graphify.com',
-    role: 'editor',
-    joinedDate: '2024-02-20',
-    status: 'active',
-  },
-  {
-    id: '3',
-    name: 'Carol White',
-    email: 'carol@graphify.com',
-    role: 'viewer',
-    joinedDate: '2024-03-10',
-    status: 'active',
-  },
-]
-
 export default function TeamPage() {
-  const [members, setMembers] = useState<TeamMember[]>(MOCK_MEMBERS)
+  const [members, setMembers] = useState<TeamMember[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -53,11 +26,11 @@ export default function TeamPage() {
       const response = await teamService.getMembers()
 
       if (response.error) {
-        // Fallback to mock data
-        setMembers(MOCK_MEMBERS)
-        setError('')
+        setMembers([])
+        setError(response.error)
       } else {
-        setMembers(response.data || MOCK_MEMBERS)
+        setMembers(response.data || [])
+        setError('')
       }
       setLoading(false)
     }

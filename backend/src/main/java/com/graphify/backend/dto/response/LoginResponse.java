@@ -7,6 +7,7 @@ public class LoginResponse {
     private String tokenType;
     private Long userId;
     private String username;
+    private String displayName;
     private String email;
     private String role;
     private Long expiresIn;
@@ -25,11 +26,12 @@ public class LoginResponse {
         this.tokenType = "Bearer";
     }
 
-    public LoginResponse(String token, String tokenType, Long userId, String username, String email, String role, Long expiresIn) {
+    public LoginResponse(String token, String tokenType, Long userId, String username, String displayName, String email, String role, Long expiresIn) {
         this.token = token;
         this.tokenType = tokenType;
         this.userId = userId;
         this.username = username;
+        this.displayName = displayName;
         this.email = email;
         this.role = role;
         this.expiresIn = expiresIn;
@@ -71,6 +73,14 @@ public class LoginResponse {
         this.username = username;
     }
 
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
+    }
+
     public String getEmail() {
         return email;
     }
@@ -100,6 +110,7 @@ public class LoginResponse {
         private String tokenType;
         private Long userId;
         private String username;
+        private String displayName;
         private String email;
         private String role;
         private Long expiresIn;
@@ -124,6 +135,11 @@ public class LoginResponse {
             return this;
         }
 
+        public LoginResponseBuilder displayName(String displayName) {
+            this.displayName = displayName;
+            return this;
+        }
+
         public LoginResponseBuilder email(String email) {
             this.email = email;
             return this;
@@ -140,7 +156,7 @@ public class LoginResponse {
         }
 
         public LoginResponse build() {
-            LoginResponse response = new LoginResponse(token, tokenType, userId, username, email, role, expiresIn);
+            LoginResponse response = new LoginResponse(token, tokenType, userId, username, displayName, email, role, expiresIn);
             return response;
         }
     }

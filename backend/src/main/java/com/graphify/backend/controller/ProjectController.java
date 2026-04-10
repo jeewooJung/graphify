@@ -8,6 +8,7 @@ import com.graphify.backend.entity.Project;
 import com.graphify.backend.entity.Team;
 import com.graphify.backend.entity.User;
 import com.graphify.backend.repository.ProjectRepository;
+import com.graphify.backend.repository.TeamMemberRepository;
 import com.graphify.backend.repository.TeamRepository;
 import com.graphify.backend.repository.UserRepository;
 import com.graphify.backend.security.UserPrincipal;
@@ -24,13 +25,16 @@ public class ProjectController {
 
     private final ProjectRepository projectRepository;
     private final TeamRepository teamRepository;
+    private final TeamMemberRepository teamMemberRepository;
     private final UserRepository userRepository;
 
     public ProjectController(ProjectRepository projectRepository,
                              TeamRepository teamRepository,
+                             TeamMemberRepository teamMemberRepository,
                              UserRepository userRepository) {
         this.projectRepository = projectRepository;
         this.teamRepository = teamRepository;
+        this.teamMemberRepository = teamMemberRepository;
         this.userRepository = userRepository;
     }
 
@@ -130,9 +134,19 @@ public class ProjectController {
         map.put("id", project.getId());
         map.put("name", project.getName());
         map.put("description", project.getDescription());
-        map.put("status", project.getStatus());
+        map.put("status", project.isArchived() ? "archived" : "active");
+        map.put("backendStatus", project.getStatus());
         map.put("isArchived", project.isArchived());
         map.put("createdAt", project.getCreatedAt());
+        map.put("createdDate", project.getCreatedAt());
+        map.put("lastModified", project.getUpdatedAt());
+        map.put("owner", project.getCreatedBy().getDisplayName() != null
+            ? project.getCreatedBy().getDisplayName()
+            : project.getCreatedBy().getUsername());
+        map.put("teamId", project.getTeam().getId());
+        map.put("teamName", project.getTeam().getName());
+        map.put("memberCount", teamMemberRepository.findByTeamId(project.getTeam().getId()).size());
+        map.put("graphCount", 0);
         return map;
     }
 }

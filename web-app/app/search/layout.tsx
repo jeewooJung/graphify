@@ -1,10 +1,10 @@
 import React from 'react'
-import { AppShell } from '@/components/layout'
+import { ProtectedAppShell } from '@/components/auth/ProtectedAppShell'
 
 export default function SearchLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return <AppShell>{children}</AppShell>
+  return <ProtectedAppShell>{children}</ProtectedAppShell>
 }

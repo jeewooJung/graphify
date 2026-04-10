@@ -19,56 +19,7 @@ interface SearchResultsProps {
   loading?: boolean
   query?: string
 }
-
-const mockResults: SearchResult[] = [
-  {
-    id: '1',
-    title: 'Product',
-    description: 'Entity representing a product in the system',
-    type: 'entity',
-    connections: 12,
-    lastUpdated: '2024-04-08',
-    color: '#3366cc',
-  },
-  {
-    id: '2',
-    title: 'User Management System',
-    description: 'Graph containing all user-related entities and relationships',
-    type: 'graph',
-    connections: 25,
-    lastUpdated: '2024-04-07',
-    color: '#10b981',
-  },
-  {
-    id: '3',
-    title: 'has_feature',
-    description: 'Relationship indicating a product has a feature',
-    type: 'relation',
-    connections: 15,
-    lastUpdated: '2024-04-06',
-    color: '#f59e0b',
-  },
-  {
-    id: '4',
-    title: 'Architecture',
-    description: 'Concept representing system architecture and design patterns',
-    type: 'concept',
-    connections: 8,
-    lastUpdated: '2024-04-05',
-    color: '#8b5cf6',
-  },
-  {
-    id: '5',
-    title: 'Customer',
-    description: 'Entity representing customer information',
-    type: 'entity',
-    connections: 20,
-    lastUpdated: '2024-04-04',
-    color: '#3366cc',
-  },
-]
-
-export function SearchResults({ results = mockResults, loading = false, query = '' }: SearchResultsProps) {
+export function SearchResults({ results, loading = false, query = '' }: SearchResultsProps) {
   if (loading) {
     return (
       <div className="empty-state">

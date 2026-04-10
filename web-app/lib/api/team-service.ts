@@ -1,4 +1,5 @@
 import { api } from './client'
+import { normalizeRole } from '@/lib/auth/users'
 
 export interface TeamMember {
   id: string
@@ -26,7 +27,28 @@ export const teamService = {
 
   async getMembers(teamId?: string) {
     const endpoint = teamId ? `/teams/${teamId}/members` : '/teams/current/members'
-    return api.get<TeamMember[]>(endpoint)
+    const response = await api.get<any[]>(endpoint)
+
+    if (response.error || !response.data) {
+      return {
+        ...response,
+        data: [],
+      }
+    }
+
+    return {
+      ...response,
+      data: response.data.map((member) => ({
+        id: String(member.userId ?? member.id),
+        name: member.displayName || member.username || member.email,
+        email: member.email,
+        role: normalizeRole(member.role),
+        joinedDate: member.joinedAt
+          ? new Date(member.joinedAt).toLocaleDateString('en-CA')
+          : '-',
+        status: member.status === 'inactive' ? 'inactive' : 'active',
+      })) as TeamMember[],
+    }
   },
 
   async addMember(teamId: string, email: string, role: string) {

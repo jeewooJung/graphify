@@ -1,16 +1,28 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Input } from '@/components/ui'
+import { useUser } from '@/lib/auth/user-context'
 import { ArrowRight, Network, ShieldCheck, Sparkles } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { user, setUser } = useUser()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (user) {
+      router.replace('/dashboard')
+    }
+  }, [router, user])
+
+  if (user) {
+    return null
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,8 +44,9 @@ export default function LoginPage() {
         return
       }
 
-      // Redirect to dashboard on success
-      router.push('/dashboard')
+      const data = await res.json()
+      setUser(data.user)
+      router.replace('/dashboard')
     } catch (err) {
       setError('An error occurred. Please try again.')
       setLoading(false)

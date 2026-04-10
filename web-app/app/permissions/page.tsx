@@ -15,48 +15,10 @@ interface Permission {
   createdDate: string
 }
 
-const MOCK_PERMISSIONS: Permission[] = [
-  {
-    id: '1',
-    role: 'admin',
-    resource: 'graphs',
-    action: 'create',
-    description: 'Create new graphs',
-    grantedTo: ['admin'],
-    createdDate: '2024-01-01',
-  },
-  {
-    id: '2',
-    role: 'editor',
-    resource: 'graphs',
-    action: 'update',
-    description: 'Update graphs',
-    grantedTo: ['admin', 'editor'],
-    createdDate: '2024-01-01',
-  },
-  {
-    id: '3',
-    role: 'viewer',
-    resource: 'graphs',
-    action: 'read',
-    description: 'View graphs',
-    grantedTo: ['admin', 'editor', 'viewer'],
-    createdDate: '2024-01-01',
-  },
-  {
-    id: '4',
-    role: 'admin',
-    resource: 'team',
-    action: 'delete',
-    description: 'Manage team members',
-    grantedTo: ['admin'],
-    createdDate: '2024-01-01',
-  },
-]
-
 export default function PermissionsPage() {
-  const [permissions, setPermissions] = useState<Permission[]>(MOCK_PERMISSIONS)
+  const [permissions, setPermissions] = useState<Permission[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     const fetchPermissions = async () => {
@@ -64,9 +26,11 @@ export default function PermissionsPage() {
       const response = await permissionService.getPermissions()
 
       if (response.error) {
-        setPermissions(MOCK_PERMISSIONS)
+        setPermissions([])
+        setError(response.error)
       } else {
-        setPermissions(response.data || MOCK_PERMISSIONS)
+        setPermissions(response.data || [])
+        setError('')
       }
       setLoading(false)
     }
@@ -88,7 +52,13 @@ export default function PermissionsPage() {
         }
       />
 
-      <div>
+      <div className="space-y-4">
+        {error && (
+          <div className="rounded-2xl border border-error-500/20 bg-error-50 px-4 py-3 text-sm text-error-500">
+            {error}
+          </div>
+        )}
+
         <div>
           <PermissionsList
             permissions={permissions}

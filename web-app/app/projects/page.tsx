@@ -18,34 +18,10 @@ interface Project {
   status: 'active' | 'archived'
 }
 
-const MOCK_PROJECTS: Project[] = [
-  {
-    id: '1',
-    name: 'Customer Analytics',
-    description: 'Customer data and relationship graph',
-    owner: 'Alice Johnson',
-    memberCount: 5,
-    graphCount: 12,
-    createdDate: '2024-01-10',
-    lastModified: '2024-04-08',
-    status: 'active',
-  },
-  {
-    id: '2',
-    name: 'Product Catalog',
-    description: 'Product hierarchy and relationships',
-    owner: 'Bob Smith',
-    memberCount: 3,
-    graphCount: 8,
-    createdDate: '2024-02-15',
-    lastModified: '2024-04-05',
-    status: 'active',
-  },
-]
-
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<Project[]>(MOCK_PROJECTS)
+  const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -53,9 +29,11 @@ export default function ProjectsPage() {
       const response = await projectService.getProjects()
 
       if (response.error) {
-        setProjects(MOCK_PROJECTS)
+        setProjects([])
+        setError(response.error)
       } else {
-        setProjects(response.data || MOCK_PROJECTS)
+        setProjects(response.data || [])
+        setError('')
       }
       setLoading(false)
     }
@@ -83,7 +61,13 @@ export default function ProjectsPage() {
         )}
       />
 
-      <div>
+      <div className="space-y-4">
+        {error && (
+          <div className="rounded-2xl border border-error-500/20 bg-error-50 px-4 py-3 text-sm text-error-500">
+            {error}
+          </div>
+        )}
+
         <ProjectList
           projects={projects}
           loading={loading}

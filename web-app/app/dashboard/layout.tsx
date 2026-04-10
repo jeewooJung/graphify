@@ -1,7 +1,5 @@
-'use client'
-
 import React from 'react'
-import { AppShell } from '@/components/layout'
+import { ProtectedAppShell } from '@/components/auth/ProtectedAppShell'
 
 export default function DashboardLayout({
   children,
@@ -9,6 +7,6 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <AppShell>{children}</AppShell>
+    <ProtectedAppShell>{children}</ProtectedAppShell>
   )
 }
