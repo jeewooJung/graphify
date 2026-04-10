@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Button } from '@/components/ui'
+import { Button, PageHeader } from '@/components/ui'
 import { ProjectList } from '@/components/project/ProjectList'
 import { projectService } from '@/lib/api/project-service'
 import { Plus } from 'lucide-react'
@@ -64,27 +64,26 @@ export default function ProjectsPage() {
   }, [])
 
   return (
-    <div style={{ backgroundColor: '#ffffff' }} className="min-h-screen">
-      {/* Header */}
-      <div style={{ borderBottomColor: 'var(--color-border)', borderBottomWidth: '1px' }} className="px-8 py-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 style={{ color: 'var(--color-text-primary)' }} className="text-3xl font-semibold mb-2">
-              Projects
-            </h1>
-            <p style={{ color: 'var(--color-text-secondary)' }}>
-              Manage your knowledge graph projects
-            </p>
-          </div>
-          <Button variant="primary" className="flex items-center gap-2">
-            <Plus size={18} />
-            New Project
+    <div className="page-shell">
+      <PageHeader
+        eyebrow="Delivery programs"
+        title="Projects"
+        description="Track graph initiatives as focused delivery streams. Each project groups the people, graphs, and review cycles behind a clear outcome."
+        meta={
+          <>
+            <span className="app-chip">{projects.length} tracked projects</span>
+            <span className="app-chip">Cross-team visibility</span>
+          </>
+        }
+        actions={(
+          <Button variant="primary">
+            <Plus size={16} />
+            New project
           </Button>
-        </div>
-      </div>
+        )}
+      />
 
-      {/* Content */}
-      <div className="px-8 py-8 max-w-6xl">
+      <div>
         <ProjectList
           projects={projects}
           loading={loading}

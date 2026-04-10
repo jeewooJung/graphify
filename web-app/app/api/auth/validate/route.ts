@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
 // Mock user database
 const USERS = [
@@ -12,9 +12,9 @@ const USERS = [
   },
 ]
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const sessionId = cookieStore.get('sessionId')?.value
 
     if (!sessionId) {

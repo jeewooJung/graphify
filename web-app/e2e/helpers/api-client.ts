@@ -91,7 +91,7 @@ export class ApiClient {
   }
 
   async login(username: string, password: string): Promise<string> {
-    const response = await this.post('/auth/login', { username, password });
+    const response = await this.post<{ token: string }>('/auth/login', { username, password });
 
     if (response.status !== 200) {
       throw new Error(`Login failed: ${response.status}`);

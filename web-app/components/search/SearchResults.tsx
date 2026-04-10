@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { Badge } from '@/components/ui'
+import { ArrowUpRight, Network, Shapes, Sparkles, Waypoints } from 'lucide-react'
 
 interface SearchResult {
   id: string
@@ -70,23 +71,30 @@ const mockResults: SearchResult[] = [
 export function SearchResults({ results = mockResults, loading = false, query = '' }: SearchResultsProps) {
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <p style={{ color: 'var(--color-text-tertiary)' }}>Searching...</p>
+      <div className="empty-state">
+        <p>Searching the workspace...</p>
       </div>
     )
   }
 
   if (results.length === 0) {
     return (
-      <div className="text-center py-12">
-        <p style={{ color: 'var(--color-text-tertiary)' }} className="mb-2">
+      <div className="empty-state flex-col gap-2">
+        <p className="text-sm font-medium text-text-secondary">
           No results found {query && `for "${query}"`}
         </p>
-        <p style={{ color: 'var(--color-text-tertiary)' }} className="text-sm">
+        <p className="text-sm text-text-tertiary">
           Try different keywords or filters
         </p>
       </div>
     )
+  }
+
+  const typeMeta = {
+    entity: { icon: <Shapes size={14} />, variant: 'primary' as const },
+    concept: { icon: <Sparkles size={14} />, variant: 'warning' as const },
+    relation: { icon: <Waypoints size={14} />, variant: 'default' as const },
+    graph: { icon: <Network size={14} />, variant: 'success' as const },
   }
 
   return (
@@ -94,39 +102,53 @@ export function SearchResults({ results = mockResults, loading = false, query = 
       {results.map(result => (
         <div
           key={result.id}
-          className="p-4 rounded-lg border transition-colors hover:bg-surface-hover"
-          style={{ borderColor: 'var(--color-border)', backgroundColor: '#ffffff' }}
+          className="rounded-2xl border border-border bg-white/72 p-5 transition-all hover:-translate-y-0.5 hover:bg-white"
         >
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex min-w-0 flex-1 gap-4">
+              <div
+                className="mt-0.5 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl"
+                style={{ backgroundColor: result.color ? `${result.color}20` : 'var(--primary-soft)' }}
+              >
+                {typeMeta[result.type].icon}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="mb-2 flex items-center gap-2">
+                  <h3 className="truncate text-base font-semibold text-text-primary">
+                    {result.title}
+                  </h3>
+                  <Badge variant={typeMeta[result.type].variant}>{result.type}</Badge>
+                </div>
                 {result.color && (
                   <div
-                    className="w-3 h-3 rounded-full"
+                    className="mb-3 h-1.5 w-16 rounded-full"
                     style={{ backgroundColor: result.color }}
                   />
                 )}
-                <h3 style={{ color: 'var(--color-text-primary)' }} className="font-semibold text-base">
-                  {result.title}
-                </h3>
-              </div>
-              <p style={{ color: 'var(--color-text-secondary)' }} className="text-sm mb-2">
+                <p className="text-sm leading-6 text-text-secondary">
                 {result.description}
-              </p>
-              <div className="flex items-center gap-3 flex-wrap">
-                <Badge variant="primary">{result.type}</Badge>
+                </p>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
                 {result.connections && (
-                  <span style={{ color: 'var(--color-text-tertiary)' }} className="text-xs">
+                    <span className="app-chip">
                     {result.connections} connections
-                  </span>
+                    </span>
                 )}
                 {result.lastUpdated && (
-                  <span style={{ color: 'var(--color-text-tertiary)' }} className="text-xs">
+                    <span className="app-chip">
                     Updated: {result.lastUpdated}
-                  </span>
+                    </span>
                 )}
+                </div>
               </div>
             </div>
+
+            <button
+              type="button"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white/85 text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-primary"
+            >
+              <ArrowUpRight size={16} />
+            </button>
           </div>
         </div>
       ))}

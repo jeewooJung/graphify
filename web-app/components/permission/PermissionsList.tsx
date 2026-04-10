@@ -22,10 +22,10 @@ interface PermissionsListProps {
 }
 
 const actionColors: Record<string, string> = {
-  create: '#10b981',
-  read: '#3366cc',
-  update: '#f59e0b',
-  delete: '#ef4444',
+  create: 'success',
+  read: 'primary',
+  update: 'warning',
+  delete: 'error',
 }
 
 export function PermissionsList({
@@ -36,65 +36,64 @@ export function PermissionsList({
 }: PermissionsListProps) {
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <p style={{ color: 'var(--color-text-tertiary)' }}>Loading permissions...</p>
+      <div className="empty-state">
+        <p>Loading permissions...</p>
       </div>
     )
   }
 
   if (permissions.length === 0) {
     return (
-      <div className="text-center py-12">
-        <p style={{ color: 'var(--color-text-tertiary)' }}>No permissions configured</p>
+      <div className="empty-state">
+        <p>No permissions configured</p>
       </div>
     )
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full">
+    <div className="app-table-shell overflow-x-auto">
+      <table className="app-table">
         <thead>
-          <tr style={{ borderBottomColor: 'var(--color-border)', borderBottomWidth: '1px' }}>
-            <th style={{ color: 'var(--color-text-primary)' }} className="text-left px-4 py-3 font-semibold text-sm">Role</th>
-            <th style={{ color: 'var(--color-text-primary)' }} className="text-left px-4 py-3 font-semibold text-sm">Resource</th>
-            <th style={{ color: 'var(--color-text-primary)' }} className="text-left px-4 py-3 font-semibold text-sm">Action</th>
-            <th style={{ color: 'var(--color-text-primary)' }} className="text-left px-4 py-3 font-semibold text-sm">Description</th>
-            <th style={{ color: 'var(--color-text-primary)' }} className="text-center px-4 py-3 font-semibold text-sm">Actions</th>
+          <tr>
+            <th className="text-left">Role</th>
+            <th className="text-left">Resource</th>
+            <th className="text-left">Action</th>
+            <th className="text-left">Description</th>
+            <th className="text-right">Actions</th>
           </tr>
         </thead>
         <tbody>
           {permissions.map(permission => (
-            <tr key={permission.id} style={{ borderBottomColor: 'var(--color-border)', borderBottomWidth: '1px' }}>
-              <td style={{ color: 'var(--color-text-primary)' }} className="px-4 py-3 text-sm font-medium">
+            <tr key={permission.id}>
+              <td className="font-semibold text-text-primary">
                 {permission.role}
               </td>
-              <td style={{ color: 'var(--color-text-secondary)' }} className="px-4 py-3 text-sm">
-                {permission.resource}
-              </td>
-              <td className="px-4 py-3 text-sm">
+              <td>{permission.resource}</td>
+              <td>
                 <Badge
-                  variant="primary"
-                  style={{ backgroundColor: actionColors[permission.action] || '#3366cc' }}
+                  variant={(actionColors[permission.action] || 'primary') as 'primary' | 'success' | 'warning' | 'error'}
                 >
                   {permission.action}
                 </Badge>
               </td>
-              <td style={{ color: 'var(--color-text-secondary)' }} className="px-4 py-3 text-sm">
-                {permission.description}
-              </td>
-              <td className="px-4 py-3 text-sm text-center flex gap-2 justify-center">
-                <button
-                  onClick={() => onEditPermission?.(permission.id)}
-                  className="p-1 hover:bg-surface rounded transition-colors"
-                >
-                  <Edit size={16} style={{ color: 'var(--color-text-secondary)' }} />
-                </button>
-                <button
-                  onClick={() => onRevokePermission?.(permission.id)}
-                  className="p-1 hover:bg-surface rounded transition-colors"
-                >
-                  <Trash2 size={16} style={{ color: 'var(--color-error)' }} />
-                </button>
+              <td>{permission.description}</td>
+              <td className="text-right">
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onEditPermission?.(permission.id)}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-white/82 text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                  >
+                    <Edit size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onRevokePermission?.(permission.id)}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-white/82 text-error-500 transition-colors hover:bg-error-50"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </td>
             </tr>
           ))}

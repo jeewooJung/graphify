@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { PageHeader } from '@/components/ui'
 import { PermissionsList } from '@/components/permission/PermissionsList'
 import { permissionService } from '@/lib/api/permission-service'
 
@@ -74,20 +75,21 @@ export default function PermissionsPage() {
   }, [])
 
   return (
-    <div style={{ backgroundColor: '#ffffff' }} className="min-h-screen">
-      {/* Header */}
-      <div style={{ borderBottomColor: 'var(--color-border)', borderBottomWidth: '1px' }} className="px-8 py-6">
-        <h1 style={{ color: 'var(--color-text-primary)' }} className="text-3xl font-semibold mb-2">
-          Permissions
-        </h1>
-        <p style={{ color: 'var(--color-text-secondary)' }}>
-          Manage role-based access control
-        </p>
-      </div>
+    <div className="page-shell">
+      <PageHeader
+        eyebrow="Access control"
+        title="Permissions"
+        description="Role-based access stays readable when the policy surface is compact. This view focuses on the permission itself before the action buttons."
+        meta={
+          <>
+            <span className="app-chip">{permissions.length} active rules</span>
+            <span className="app-chip">Graph, team, and project scope</span>
+          </>
+        }
+      />
 
-      {/* Content */}
-      <div className="px-8 py-8">
-        <div className="bg-white border rounded-lg" style={{ borderColor: 'var(--color-border)' }}>
+      <div>
+        <div>
           <PermissionsList
             permissions={permissions}
             loading={loading}

@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create session cookie
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     cookieStore.set('sessionId', user.id, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

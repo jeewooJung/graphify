@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { Badge } from '@/components/ui'
-import { Trash2, Edit, ExternalLink } from 'lucide-react'
+import { Edit, ExternalLink, Trash2 } from 'lucide-react'
 
 interface Project {
   id: string
@@ -33,69 +33,76 @@ export function ProjectList({
 }: ProjectListProps) {
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <p style={{ color: 'var(--color-text-tertiary)' }}>Loading projects...</p>
+      <div className="empty-state">
+        <p>Loading projects...</p>
       </div>
     )
   }
 
   if (projects.length === 0) {
     return (
-      <div className="text-center py-12">
-        <p style={{ color: 'var(--color-text-tertiary)' }}>No projects yet</p>
+      <div className="empty-state">
+        <p>No projects yet</p>
       </div>
     )
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-4 lg:grid-cols-2">
       {projects.map(project => (
         <div
           key={project.id}
-          className="p-4 rounded-lg border hover:bg-surface-hover transition-colors"
-          style={{ borderColor: 'var(--color-border)', backgroundColor: '#ffffff' }}
+          className="app-card p-5 transition-all hover:-translate-y-0.5"
         >
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex-1">
-              <h3 style={{ color: 'var(--color-text-primary)' }} className="font-semibold text-base mb-1">
-                {project.name}
-              </h3>
-              <p style={{ color: 'var(--color-text-secondary)' }} className="text-sm mb-2">
-                {project.description}
-              </p>
-              <div className="flex items-center gap-4 flex-wrap">
-                <span style={{ color: 'var(--color-text-tertiary)' }} className="text-xs">
-                  Owner: {project.owner}
-                </span>
-                <span style={{ color: 'var(--color-text-tertiary)' }} className="text-xs">
-                  {project.memberCount} members
-                </span>
-                <span style={{ color: 'var(--color-text-tertiary)' }} className="text-xs">
-                  {project.graphCount} graphs
-                </span>
-                <Badge variant="primary" style={{ backgroundColor: project.status === 'active' ? '#10b981' : '#9ca3af' }}>
+          <div className="mb-5 flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <div className="mb-2 flex items-center gap-2">
+                <Badge variant={project.status === 'active' ? 'success' : 'default'}>
                   {project.status}
                 </Badge>
+                <span className="text-xs font-medium text-text-tertiary">
+                  Updated {project.lastModified}
+                </span>
+              </div>
+              <h3 className="text-lg font-semibold tracking-[-0.03em] text-text-primary">
+                {project.name}
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-text-secondary">
+                {project.description}
+              </p>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="app-chip">
+                  Owner: {project.owner}
+                </span>
+                <span className="app-chip">
+                  {project.memberCount} members
+                </span>
+                <span className="app-chip">
+                  {project.graphCount} graphs
+                </span>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={() => onViewProject?.(project.id)}
-                className="p-2 hover:bg-surface rounded transition-colors"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white/82 text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-primary"
               >
-                <ExternalLink size={16} style={{ color: 'var(--color-text-secondary)' }} />
+                <ExternalLink size={16} />
               </button>
               <button
+                type="button"
                 onClick={() => onEditProject?.(project.id)}
-                className="p-2 hover:bg-surface rounded transition-colors"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white/82 text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-primary"
               >
-                <Edit size={16} style={{ color: 'var(--color-text-secondary)' }} />
+                <Edit size={16} />
               </button>
               <button
+                type="button"
                 onClick={() => onDeleteProject?.(project.id)}
-                className="p-2 hover:bg-surface rounded transition-colors"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white/82 text-error-500 transition-colors hover:bg-error-50"
               >
-                <Trash2 size={16} style={{ color: 'var(--color-error)' }} />
+                <Trash2 size={16} />
               </button>
             </div>
           </div>

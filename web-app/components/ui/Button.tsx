@@ -20,9 +20,9 @@ const buttonVariants: Record<ButtonVariant, string> = {
 }
 
 const buttonSizes: Record<ButtonSize, string> = {
-  sm: 'h-8 px-3 text-xs',
-  md: 'h-9 px-4 text-sm',
-  lg: 'h-10 px-6 text-base',
+  sm: 'h-8 px-2.5 text-[12px]',
+  md: 'h-9 px-3.5 text-[13px]',
+  lg: 'h-10 px-4 text-sm',
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -34,6 +34,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       className={clsx(
         buttonVariants[variant],
         buttonSizes[size],
+        'shrink-0',
         className
       )}
       ref={ref}

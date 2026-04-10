@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { SearchBar, SearchResults } from '@/components/search'
+import { PageHeader } from '@/components/ui'
 import { searchService } from '@/lib/api/search-service'
 
 interface SearchResult {
@@ -109,48 +110,59 @@ export default function SearchPage() {
   }, [searchQuery, selectedType])
 
   return (
-    <div style={{ backgroundColor: '#ffffff' }} className="min-h-screen">
-      {/* Header Section */}
-      <div style={{ borderBottomColor: 'var(--color-border)', borderBottomWidth: '1px' }} className="px-8 py-6">
-        <h1 style={{ color: 'var(--color-text-primary)' }} className="text-3xl font-semibold mb-2">
-          Search
-        </h1>
-        <p style={{ color: 'var(--color-text-secondary)' }}>
-          Find nodes, graphs, and relationships across your knowledge base
-        </p>
-      </div>
+    <div className="page-shell">
+      <PageHeader
+        eyebrow="Knowledge retrieval"
+        title="Search graph entities"
+        description="Search across entities, concepts, relationships, and whole graphs without losing context. The new layout keeps controls visible while results remain easy to scan."
+        meta={
+          <>
+            <span className="app-chip">Entity, concept, relation, graph</span>
+            <span className="app-chip">Debounced live results</span>
+          </>
+        }
+      />
 
-      {/* Search Section */}
-      <div className="px-8 py-8">
-        <div className="max-w-3xl mb-8">
+      <div className="grid gap-5 xl:grid-cols-[minmax(340px,0.95fr)_minmax(0,1.45fr)]">
+        <div className="app-card p-6">
           <SearchBar
             onSearch={setSearchQuery}
             onFilterChange={setSelectedType}
           />
         </div>
 
-        {/* Results Section */}
-        <div className="max-w-4xl">
+        <div className="app-card p-6">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <div className="panel-heading">Results</div>
+              <p className="mt-1 text-sm leading-6 text-text-secondary">
+                {searchQuery || selectedType
+                  ? 'Matched against local fallback data or the connected search service.'
+                  : 'Start with a term or filter to surface relevant graph entries.'}
+              </p>
+            </div>
+            {(searchQuery || selectedType) && (
+              <span className="app-chip">
+                {loading ? 'Searching...' : `${results.length} result${results.length !== 1 ? 's' : ''}`}
+              </span>
+            )}
+          </div>
+
           {error && (
-            <div style={{ backgroundColor: '#fee2e2', borderColor: '#fecaca', color: 'var(--color-error)' }} className="p-4 rounded mb-4 border">
+            <div className="mb-4 rounded-2xl border border-error-500/20 bg-error-50 px-4 py-3 text-sm text-error-500">
               {error}
             </div>
           )}
 
           {searchQuery || selectedType ? (
-            <>
-              <p style={{ color: 'var(--color-text-tertiary)' }} className="text-sm mb-4">
-                {loading ? 'Searching...' : `${results.length} result${results.length !== 1 ? 's' : ''} found`}
-              </p>
-              <SearchResults
-                results={results}
-                loading={loading}
-                query={searchQuery}
-              />
-            </>
+            <SearchResults
+              results={results}
+              loading={loading}
+              query={searchQuery}
+            />
           ) : (
-            <div className="text-center py-12">
-              <p style={{ color: 'var(--color-text-tertiary)' }}>
+            <div className="empty-state">
+              <p>
                 Start typing to search across your knowledge base
               </p>
             </div>

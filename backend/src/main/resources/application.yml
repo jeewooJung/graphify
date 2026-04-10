@@ -4,9 +4,9 @@ spring:
     version: 0.1.0
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/graphify
-    username: graphify_user
-    password: ${DB_PASSWORD:graphify123}
+    url: jdbc:postgresql://localhost:5432/graphify
+    username: anchors
+    password: ${DB_PASSWORD:Dodzjtm26!@pg}
     hikari:
       maximum-pool-size: 20
       minimum-idle: 5
@@ -28,7 +28,8 @@ spring:
   redis:
     host: localhost
     port: 6380
-    password: ${REDIS_PASSWORD:redis123}
+    password: ${REDIS_PASSWORD:Dodzjtm26!@redis}
+    database: 3
     timeout: 2000ms
     jedis:
       pool:

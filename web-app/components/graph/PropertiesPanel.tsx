@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { Badge } from '@/components/ui'
 
 interface NodeProperty {
   id: string
@@ -43,8 +44,10 @@ interface PropertiesPanelProps {
 export function PropertiesPanel({ selectedNodeId }: PropertiesPanelProps) {
   if (!selectedNodeId) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <p style={{ color: 'var(--color-text-tertiary)' }}>Select a node to view properties</p>
+      <div className="app-card flex h-full items-center justify-center p-6">
+        <p className="max-w-xs text-center text-sm leading-6 text-text-tertiary">
+          Select a node to inspect property values, related nodes, and update history.
+        </p>
       </div>
     )
   }
@@ -52,59 +55,64 @@ export function PropertiesPanel({ selectedNodeId }: PropertiesPanelProps) {
   const details = mockNodeDetails
 
   return (
-    <div className="h-full flex flex-col overflow-y-auto">
-      {/* Header */}
-      <div style={{ borderBottom: '1px solid var(--color-border)' }} className="p-4">
-        <h2 style={{ color: 'var(--color-text-primary)' }} className="text-lg font-semibold">{details.name}</h2>
-        <p style={{ color: 'var(--color-text-tertiary)' }} className="text-xs mt-1">{details.description}</p>
+    <div className="app-card flex h-full flex-col overflow-y-auto">
+      <div className="border-b border-border px-5 pb-4 pt-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="panel-heading">{details.name}</h2>
+            <p className="mt-1 text-sm leading-6 text-text-tertiary">{details.description}</p>
+          </div>
+          <Badge
+            variant={
+              details.type === 'entity'
+                ? 'primary'
+                : details.type === 'concept'
+                  ? 'warning'
+                  : 'default'
+            }
+          >
+            {details.type}
+          </Badge>
+        </div>
       </div>
 
-      {/* Properties */}
-      <div className="p-4 space-y-4">
-        {/* Type */}
+      <div className="space-y-5 p-5">
         <div>
-          <p style={{ color: 'var(--color-text-tertiary)' }} className="text-xs font-semibold mb-1">Type</p>
-          <p style={{ color: 'var(--color-text-primary)' }} className="text-sm">{details.type}</p>
-        </div>
-
-        {/* Properties Table */}
-        <div>
-          <p style={{ color: 'var(--color-text-tertiary)' }} className="text-xs font-semibold mb-2">Properties</p>
-          <div className="space-y-2">
+          <p className="kpi-label">Properties</p>
+          <div className="mt-3 space-y-2">
             {details.properties.map(prop => (
-              <div key={prop.id} className="p-2 rounded text-xs" style={{ backgroundColor: 'var(--color-surface)' }}>
-                <div className="flex justify-between">
-                  <span style={{ color: 'var(--color-text-primary)' }} className="font-medium">{prop.name}</span>
-                  <span style={{ color: 'var(--color-text-tertiary)' }}>{prop.type}</span>
+              <div key={prop.id} className="rounded-2xl border border-border bg-white/78 p-3">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-sm font-semibold text-text-primary">{prop.name}</span>
+                  <span className="text-xs uppercase tracking-[0.08em] text-text-tertiary">{prop.type}</span>
                 </div>
-                <div style={{ color: 'var(--color-text-secondary)' }} className="mt-1">{prop.value}</div>
+                <div className="mt-2 text-sm leading-6 text-text-secondary">{prop.value}</div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Related Nodes */}
         <div>
-          <p style={{ color: 'var(--color-text-tertiary)' }} className="text-xs font-semibold mb-2">Related Nodes</p>
-          <div className="flex flex-wrap gap-1">
+          <p className="kpi-label">Related nodes</p>
+          <div className="mt-3 flex flex-wrap gap-2">
             {details.relatedNodes.map(node => (
-              <span key={node} className="text-xs px-2 py-1 rounded" style={{ backgroundColor: '#dbeafe', color: 'var(--color-primary-700)' }}>
+              <span key={node} className="app-chip">
                 {node}
               </span>
             ))}
           </div>
         </div>
 
-        {/* Metadata */}
-        <div style={{ borderTopColor: 'var(--color-border)' }} className="border-t pt-4">
-          <div className="space-y-1 text-xs">
-            <div className="flex justify-between">
-              <span style={{ color: 'var(--color-text-tertiary)' }}>Created:</span>
-              <span style={{ color: 'var(--color-text-primary)' }}>{details.createdAt}</span>
+        <div className="rounded-2xl border border-border bg-surface-hover p-4">
+          <p className="kpi-label">Metadata</p>
+          <div className="mt-3 space-y-2 text-sm">
+            <div className="flex justify-between gap-4">
+              <span className="text-text-tertiary">Created</span>
+              <span className="font-medium text-text-primary">{details.createdAt}</span>
             </div>
-            <div className="flex justify-between">
-              <span style={{ color: 'var(--color-text-tertiary)' }}>Updated:</span>
-              <span style={{ color: 'var(--color-text-primary)' }}>{details.updatedAt}</span>
+            <div className="flex justify-between gap-4">
+              <span className="text-text-tertiary">Updated</span>
+              <span className="font-medium text-text-primary">{details.updatedAt}</span>
             </div>
           </div>
         </div>

@@ -1,6 +1,5 @@
 import React from 'react'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui'
-import { User, MessageSquare, Edit2 } from 'lucide-react'
+import { Edit2, MessageSquare, User, Users2 } from 'lucide-react'
 
 interface Activity {
   id: string
@@ -42,34 +41,45 @@ const iconMap = {
 
 export function TeamActivity() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Team Activity</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {mockActivity.map((activity) => {
-            const Icon = iconMap[activity.icon]
-            return (
-              <div key={activity.id} className="flex gap-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                  <Icon size={14} className="text-primary-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-text-primary">
-                    <span className="font-medium">{activity.user}</span>
-                    {' '}
-                    {activity.action}
-                  </p>
-                  <p className="text-xs text-text-tertiary mt-0.5">
-                    {activity.timestamp}
-                  </p>
-                </div>
-              </div>
-            )
-          })}
+    <div className="app-card overflow-hidden">
+      <div className="flex items-start justify-between gap-4 border-b border-border px-4 py-4">
+        <div>
+          <div className="panel-heading">Team activity</div>
+          <p className="mt-1 text-[13px] leading-6 text-text-secondary">
+            Collaboration signals from your reviewers and editors.
+          </p>
         </div>
-      </CardContent>
-    </Card>
+        <span className="app-chip">
+          <Users2 size={12} />
+          3 updates
+        </span>
+      </div>
+
+      <div className="divide-y divide-border">
+        {mockActivity.map((activity) => {
+          const Icon = iconMap[activity.icon]
+          return (
+            <div
+              key={activity.id}
+              className="flex gap-3 px-4 py-4 transition-colors hover:bg-surface-hover"
+            >
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-600">
+                <Icon size={14} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] leading-6 text-text-primary">
+                  <span className="font-medium">{activity.user}</span>
+                  {' '}
+                  {activity.action}
+                </p>
+                <p className="mt-1 text-[11px] font-medium text-text-tertiary">
+                  {activity.timestamp}
+                </p>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }

@@ -10,8 +10,10 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p style={{ color: 'var(--color-text-tertiary)' }}>Loading...</p>
+      <div className="flex min-h-screen items-center justify-center px-6">
+        <div className="app-card rounded-[28px] px-8 py-6 text-center">
+          <p className="text-sm text-text-tertiary">Loading workspace...</p>
+        </div>
       </div>
     )
   }

@@ -26,9 +26,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${firaCode.variable} h-full antialiased`}
+      className={`${inter.variable} ${firaCode.variable} h-full font-sans antialiased`}
     >
-      <body className="min-h-screen bg-white text-text-primary">
+      <body className="min-h-screen bg-canvas text-text-primary">
         <UserProvider>
           {children}
         </UserProvider>

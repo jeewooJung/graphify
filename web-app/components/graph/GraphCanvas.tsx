@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useRef, useState, useEffect } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { Canvas, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import { graphService } from '@/lib/api/graph-service'
@@ -80,18 +80,17 @@ function Edges({ nodes, edges }: { nodes: GraphNode[]; edges: GraphEdge[] }) {
     const sourceNode = nodes.find(n => n.id === edge.source)
     const targetNode = nodes.find(n => n.id === edge.target)
     if (!sourceNode || !targetNode) return null
+    const positions = new Float32Array([
+      sourceNode.x, sourceNode.y, sourceNode.z,
+      targetNode.x, targetNode.y, targetNode.z,
+    ])
 
     return (
       <line key={`${edge.source}-${edge.target}`}>
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            count={2}
-            array={new Float32Array([
-              sourceNode.x, sourceNode.y, sourceNode.z,
-              targetNode.x, targetNode.y, targetNode.z,
-            ])}
-            itemSize={3}
+            args={[positions, 3]}
           />
         </bufferGeometry>
         <lineBasicMaterial color="#d1d5db" linewidth={1} />
@@ -165,22 +164,22 @@ export function GraphCanvas({ graphId, selectedNodeId, onSelectNode }: GraphCanv
 
   if (loading && graphId) {
     return (
-      <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-surface)' }}>
-        <p style={{ color: 'var(--color-text-tertiary)' }}>Loading graph...</p>
+      <div className="flex h-full w-full items-center justify-center">
+        <p className="text-sm text-text-tertiary">Loading graph...</p>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-surface)' }}>
-        <p style={{ color: 'var(--color-error)' }}>Error: {error}</p>
+      <div className="flex h-full w-full items-center justify-center">
+        <p className="text-sm text-error-500">Error: {error}</p>
       </div>
     )
   }
 
   return (
-    <Canvas camera={{ position: [0, 0, 12], fov: 50 }}>
+    <Canvas camera={{ position: [0, 0, 12], fov: 50 }} dpr={[1, 1.5]}>
       <CameraController />
       <ambientLight intensity={0.6} />
       <pointLight position={[10, 10, 10]} intensity={0.8} />

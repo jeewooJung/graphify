@@ -29,7 +29,7 @@ interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {}
 const CardHeader = React.forwardRef<HTMLDivElement, CardHeaderProps>(
   ({ className, ...props }, ref) => (
     <div
-      className={clsx('border-b border-border pb-4 mb-4', className)}
+      className={clsx('mb-5 border-b border-border px-6 pb-4 pt-6', className)}
       ref={ref}
       {...props}
     />
@@ -43,7 +43,7 @@ interface CardTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {}
 const CardTitle = React.forwardRef<HTMLHeadingElement, CardTitleProps>(
   ({ className, ...props }, ref) => (
     <h2
-      className={clsx('text-lg font-semibold text-text-primary', className)}
+      className={clsx('text-lg font-semibold tracking-[-0.03em] text-text-primary', className)}
       ref={ref}
       {...props}
     />
@@ -57,7 +57,7 @@ interface CardContentProps extends React.HTMLAttributes<HTMLDivElement> {}
 const CardContent = React.forwardRef<HTMLDivElement, CardContentProps>(
   ({ className, ...props }, ref) => (
     <div
-      className={clsx('text-sm text-text-secondary', className)}
+      className={clsx('px-6 pb-6 text-sm text-text-secondary', className)}
       ref={ref}
       {...props}
     />
