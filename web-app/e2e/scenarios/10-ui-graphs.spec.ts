@@ -1,61 +1,52 @@
 import { test, expect } from '@playwright/test';
 
+async function loginAsDemoUser(page: import('@playwright/test').Page) {
+  await page.goto('/auth/login');
+  await page.getByPlaceholder('your@email.com').fill('demo@graphify.com');
+  await page.getByPlaceholder('Enter your password').fill('demo123');
+  await page.getByRole('button', { name: /sign in to graphify/i }).click();
+  await page.waitForURL('/dashboard');
+}
+
 test.describe('UI - Graph Explorer Page', () => {
   test.beforeEach(async ({ page }) => {
+    await loginAsDemoUser(page);
     await page.goto('/graphs');
   });
 
   test('UI-10: Graph explorer page loads with 3-panel layout', async ({ page }) => {
     await page.goto('/graphs');
-    expect(page).toHaveURL('/graphs');
+    await expect(page).toHaveURL('/graphs');
 
-    // Check for main content
-    const mainContent = page.locator('main');
-    await expect(mainContent).toBeVisible();
+    await expect(page.getByText('Relationship workspace')).toBeVisible();
   });
 
   test('UI-11: NodesList panel is visible (left)', async ({ page }) => {
     await page.goto('/graphs');
 
-    // Look for nodes list or sidebar with node content
-    const nodesList = page.locator('[role="region"]').first();
-    await expect(nodesList).toBeVisible().catch(async () => {
-      // Fallback: look for any list or panel
-      const anyList = page.locator('ul, ol, [class*="list"], [class*="panel"]').first();
-      await expect(anyList).toBeVisible();
-    });
+    const nodesList = page.getByRole('region', { name: 'Nodes List' });
+    await expect(nodesList).toBeVisible();
   });
 
   test('UI-12: GraphCanvas (3D visualization) is visible', async ({ page }) => {
     await page.goto('/graphs');
 
-    // Look for canvas element (three.js uses canvas)
     const canvas = page.locator('canvas').first();
-    await expect(canvas).toBeVisible().catch(async () => {
-      // Fallback: look for any visualization container
-      const viz = page.locator('[class*="canvas"], [class*="viz"], [class*="graph"]').first();
-      await expect(viz).toBeVisible();
-    });
+    await expect(canvas).toBeVisible();
   });
 
   test('UI-13: PropertiesPanel (right) is visible', async ({ page }) => {
     await page.goto('/graphs');
 
-    // Look for properties panel
-    const propsPanel = page.locator('[class*="properties"], [class*="panel"], [class*="detail"]').last();
-    await expect(propsPanel).toBeVisible().catch(async () => {
-      // Fallback: look for any right sidebar
-      const rightSidebar = page.locator('aside').last();
-      await expect(rightSidebar).toBeVisible();
-    });
+    await expect(page.getByText('Select a node to inspect', { exact: true })).toBeVisible();
   });
 
   test('UI-14: Graphs link is active in sidebar', async ({ page }) => {
     await page.goto('/graphs');
 
-    const graphsLink = page.locator('a', { hasText: /Graphs/i });
+    const graphsLink = page.getByRole('link', { name: 'Graphs' }).first();
     const isActive = await graphsLink.evaluate((el) =>
-      el.className.includes('active') || el.className.includes('current'),
+      el.className.includes('active') || el.getAttribute('aria-current') === 'page',
     );
 
     expect(isActive).toBeTruthy();
@@ -64,14 +55,10 @@ test.describe('UI - Graph Explorer Page', () => {
   test('UI-15: NodesList search filter works', async ({ page }) => {
     await page.goto('/graphs');
 
-    // Find search/filter input in nodes panel
     const searchInput = page.locator('input[placeholder*="search" i], input[placeholder*="filter" i]').first();
 
-    if (await searchInput.isVisible()) {
-      // Type in search
-      await searchInput.fill('test');
-      // Check that some filtering happened (list changed or filtered message appeared)
-      await page.waitForTimeout(500);
-    }
+    await expect(searchInput).toBeVisible();
+    await searchInput.fill('Product');
+    await expect(page.getByText('Product', { exact: true })).toBeVisible();
   });
 });
