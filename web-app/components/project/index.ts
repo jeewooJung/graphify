@@ -1,1 +1,7 @@
+export { default as ProjectContextNav } from './ProjectContextNav'
 export { ProjectList } from './ProjectList'
+export { ProjectDetailHeader } from './ProjectDetailHeader'
+export { ProjectMetricCards } from './ProjectMetricCards'
+export { ProjectCtaRow } from './ProjectCtaRow'
+export { RecentProjectUploads } from './RecentProjectUploads'
+export { RecentProjectChatSessions } from './RecentProjectChatSessions'
