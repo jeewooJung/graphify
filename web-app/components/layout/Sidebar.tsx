@@ -11,6 +11,7 @@ import {
   FolderOpen,
   LayoutDashboard,
   Lock,
+  MessageSquare,
   Network,
   Plus,
   Search as SearchIcon,
@@ -158,10 +159,10 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                   isActive={isActive('/dashboard')}
                 />
                 <NavItem
-                  href="/graphs"
-                  icon={<Network size={16} />}
-                  label="Graphs"
-                  isActive={isActive('/graphs')}
+                  href="/chat"
+                  icon={<MessageSquare size={16} />}
+                  label="Chat"
+                  isActive={isActive('/chat')}
                 />
                 <NavItem
                   href="/search"
@@ -169,12 +170,32 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                   label="Search"
                   isActive={isActive('/search')}
                 />
+                <NavItem
+                  href="/graphs"
+                  icon={<Network size={16} />}
+                  label="Graphs"
+                  isActive={isActive('/graphs')}
+                />
               </div>
             </div>
 
             <div>
               <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-text-tertiary">
-                Manage
+                Knowledge
+              </div>
+              <div className="space-y-1">
+                <NavItem
+                  href="/projects"
+                  icon={<FolderOpen size={16} />}
+                  label="Projects"
+                  isActive={isActive('/projects')}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-text-tertiary">
+                Admin
               </div>
               <div className="space-y-1">
                 <NavItem
@@ -182,12 +203,6 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                   icon={<Users size={16} />}
                   label="Team"
                   isActive={isActive('/team')}
-                />
-                <NavItem
-                  href="/projects"
-                  icon={<FolderOpen size={16} />}
-                  label="Projects"
-                  isActive={isActive('/projects')}
                 />
                 <NavItem
                   href="/permissions"

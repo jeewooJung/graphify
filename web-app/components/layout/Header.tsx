@@ -1,8 +1,9 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui'
+import { projectService } from '@/lib/api/project-service'
 import {
   Bell,
   ChevronDown,
@@ -43,8 +44,59 @@ export function Header({ onMenuToggle }: HeaderProps) {
   const pathname = usePathname()
   const { user, logout } = useUser()
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [currentProjectName, setCurrentProjectName] = useState<string | null>(null)
   const pageCopy =
     ROUTE_COPY[Object.keys(ROUTE_COPY).find((route) => pathname.startsWith(route)) || '/dashboard']
+  const projectMatch = pathname.match(/^\/projects\/([^/]+)(?:\/|$)/)
+  let currentProjectId =
+    projectMatch?.[1] && pathname !== '/projects' ? projectMatch[1] : null
+
+  if (
+    currentProjectId &&
+    !/^\/projects\/[^/]+(?:\/documents)?$/.test(pathname)
+  ) {
+    currentProjectId = null
+  }
+
+  useEffect(() => {
+    let isCancelled = false
+
+    const loadProject = async () => {
+      if (!currentProjectId) {
+        setCurrentProjectName(null)
+        return
+      }
+
+      setCurrentProjectName(null)
+
+      try {
+        if (typeof projectService.getProject === 'function') {
+          const response = await projectService.getProject(currentProjectId)
+          if (!isCancelled && response.data?.name) {
+            setCurrentProjectName(response.data.name)
+            return
+          }
+        }
+
+        if (typeof projectService.getProjects === 'function') {
+          const response = await projectService.getProjects()
+          const project = response.data?.find(({ id }) => id === currentProjectId)
+
+          if (!isCancelled && project?.name) {
+            setCurrentProjectName(project.name)
+          }
+        }
+      } catch {
+        // Fall back to the projectId badge text when lookups fail.
+      }
+    }
+
+    void loadProject()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [currentProjectId])
 
   const handleLogout = async () => {
     await logout()
@@ -91,6 +143,14 @@ export function Header({ onMenuToggle }: HeaderProps) {
             </button>
           </div>
         </div>
+
+        {currentProjectId && (
+          <div className="min-w-0 items-center flex">
+            <div className="inline-flex max-w-[220px] items-center rounded-full border border-border bg-white px-3 py-1.5 text-[11px] font-medium text-text-primary shadow-panel">
+              <span className="truncate">{currentProjectName || currentProjectId}</span>
+            </div>
+          </div>
+        )}
 
         <div className="ml-auto flex items-center gap-2">
           <Button
