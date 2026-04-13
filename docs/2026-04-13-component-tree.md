@@ -56,10 +56,10 @@ ChatLayout
 #### ChatLayout
 
 - **역할**: 데스크톱 3열(좌: 세션 목록, 중앙: 대화, 우: 출처) / 모바일 단일열 + 드로어로 반응형 전환.
-- **props**: `{ sessionId?: string; scope?: ChatScope; children: ReactNode; rightSlot?: ReactNode }`
+- **props**: `{ sessionId?: string; scope?: ChatScope; leftSlot?: ReactNode; children: ReactNode; rightSlot?: ReactNode; onSessionListOpenChange?: (open: boolean) => void; onSourcePanelOpenChange?: (open: boolean) => void }`. 트리 구조(좌: 세션 목록, 중앙: 대화, 우: 출처)를 명시적으로 슬롯화한다. `leftSlot`은 `ChatSessionList`, `children`은 중앙 컨텐츠(Welcome/Conversation), `rightSlot`은 `SourcePanel`용.
 - **내부 상태**: `isSessionListOpen`, `isSourcePanelOpen` (모바일 드로어 토글).
 - **외부 의존 데이터**: 없음 (레이아웃만).
-- **이벤트**: 드로어 open/close 콜백 옵션.
+- **이벤트**: `onSessionListOpenChange` / `onSourcePanelOpenChange` — 모바일 드로어 상태 변화 콜백.
 - **재사용성**: 중. 채팅 전용이지만 유사한 3열 화면(예: 그래프 탐색)에 패턴 이식 가능.
 
 #### ChatSessionList
