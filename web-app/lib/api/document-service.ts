@@ -1,4 +1,18 @@
-import type { DocumentMetadataInput } from '@/types/document'
+import { api } from '@/lib/api/client'
+import {
+  asRecord,
+  buildDocumentQuery,
+  mapDocumentChunk,
+  mapDocumentDetail,
+  mapDocumentSummary,
+  resolveItems,
+} from '@/lib/api/document-service.helpers'
+import type {
+  DocumentChunk,
+  DocumentFilterState,
+  DocumentMetadataInput,
+  DocumentSummary,
+} from '@/types/document'
 
 type UploadDocumentResult = {
   data?: {
@@ -7,6 +21,7 @@ type UploadDocumentResult = {
   }
   error?: string
 }
+
 
 function createAbortError() {
   if (typeof DOMException !== 'undefined') {
@@ -35,6 +50,64 @@ function parseJsonBody(body: string) {
 }
 
 export const documentService = {
+  async getProjectDocuments(
+    projectId: string,
+    filter: Partial<DocumentFilterState> = {},
+    options: { limit?: number; offset?: number; sort?: 'recent' | 'title' } = {}
+  ) {
+    const query = buildDocumentQuery(filter, options)
+    const response = await api.get<unknown>(
+      `/projects/${encodeURIComponent(projectId)}/documents${query ? `?${query}` : ''}`
+    )
+
+    if (response.error || !response.data) {
+      return { ...response, data: [] as DocumentSummary[] }
+    }
+
+    return {
+      ...response,
+      data: resolveItems(response.data, ['documents', 'items', 'data']).map(mapDocumentSummary),
+    }
+  },
+
+  async getDocument(documentId: string) {
+    const response = await api.get<unknown>(`/documents/${encodeURIComponent(documentId)}`)
+    if (response.error || !response.data) {
+      return response
+    }
+
+    return {
+      ...response,
+      data: mapDocumentDetail(asRecord(response.data).document ?? response.data),
+    }
+  },
+
+  async getDocumentChunks(documentId: string, options: { limit?: number } = {}) {
+    const params = new URLSearchParams()
+    if (typeof options.limit === 'number') {
+      params.set('limit', String(options.limit))
+    }
+
+    const query = params.toString()
+    const response = await api.get<unknown>(
+      `/documents/${encodeURIComponent(documentId)}/chunks${query ? `?${query}` : ''}`
+    )
+
+    if (response.error || !response.data) {
+      return { ...response, data: [] as DocumentChunk[] }
+    }
+
+    return {
+      ...response,
+      data: resolveItems(response.data, ['chunks', 'items', 'data']).map(mapDocumentChunk),
+    }
+  },
+
+  async deleteDocument(documentId: string) {
+    const response = await api.delete<unknown>(`/documents/${encodeURIComponent(documentId)}`)
+    return response.error ? response : { ...response, data: true as const }
+  },
+
   async uploadDocument(
     projectId: string,
     file: File,

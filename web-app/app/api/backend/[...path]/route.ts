@@ -29,7 +29,8 @@ async function proxyRequest(
   }
 
   if (request.method !== 'GET' && request.method !== 'HEAD') {
-    requestInit.body = await request.text()
+    requestInit.body = request.body
+    ;(requestInit as RequestInit & { duplex?: 'half' }).duplex = 'half'
   }
 
   const backendResponse = await fetch(backendUrl, requestInit)
@@ -57,6 +58,14 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ pat
   return proxyRequest(request, context)
 }
 
+export async function PATCH(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
+  return proxyRequest(request, context)
+}
+
 export async function DELETE(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
+  return proxyRequest(request, context)
+}
+
+export async function OPTIONS(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   return proxyRequest(request, context)
 }
