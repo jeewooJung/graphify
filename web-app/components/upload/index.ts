@@ -1,1 +1,7 @@
 export { UploadDrawer } from './UploadDrawer'
+export { FileDropzone } from './FileDropzone'
+export { UploadFileList } from './UploadFileList'
+export { UploadValidationList } from './UploadValidationList'
+export { UploadMetadataForm } from './UploadMetadataForm'
+export { UploadProgressList } from './UploadProgressList'
+export { UploadResultSummary } from './UploadResultSummary'

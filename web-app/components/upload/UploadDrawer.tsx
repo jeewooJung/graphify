@@ -1,7 +1,24 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui'
+import { documentService, runWithConcurrency } from '@/lib/api/document-service'
+import { pollJob } from '@/lib/api/job-service'
+import { FileDropzone } from './FileDropzone'
+import { UploadFileList } from './UploadFileList'
+import {
+  buildMetadataRecord,
+  computeUploadResult,
+  createInitialMetadata,
+  createInitialProgress,
+  mergeMetadata,
+  validateUploadFiles,
+} from './uploadDrawerHelpers'
+import { UploadMetadataForm } from './UploadMetadataForm'
+import { UploadProgressList } from './UploadProgressList'
+import { UploadResultSummary } from './UploadResultSummary'
+import { UploadValidationList } from './UploadValidationList'
+import { matchesAccept, uniqueTags } from './uploadUtils'
 import type {
   DocumentMetadataInput,
   FileCandidate,
@@ -21,12 +38,24 @@ type UploadDrawerProps = {
 }
 
 const STEPS: UploadDrawerStep[] = ['select', 'validate', 'metadata', 'submitting', 'result']
+const ACCEPT = [
+  '.pdf',
+  '.md',
+  '.docx',
+  '.txt',
+  'application/pdf',
+  'text/markdown',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
+]
+const MAX_SIZE_BYTES = 50 * 1024 * 1024
 
 function toFileCandidate(file: File): FileCandidate {
+  const fallbackId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   return {
     id: typeof crypto !== 'undefined' && 'randomUUID' in crypto
       ? crypto.randomUUID()
-      : Math.random().toString(36).slice(2),
+      : fallbackId,
     file,
     sizeBytes: file.size,
     mimeType: file.type,
@@ -47,6 +76,7 @@ export function UploadDrawer({
   const [progressByFile, setProgressByFile] = useState<Record<string, UploadProgress>>({})
   const [abortControllersByFile, setAbortControllersByFile] = useState<Record<string, AbortController>>({})
   const [result, setResult] = useState<UploadResult | null>(null)
+  const progressRef = useRef<Record<string, UploadProgress>>({})
 
   useEffect(() => {
     if (!isOpen) return
@@ -54,42 +84,249 @@ export function UploadDrawer({
     const nextFiles = (initialFiles ?? []).map(toFileCandidate)
     setStep('select')
     setFiles(nextFiles)
-    setMetadataByFile(
-      Object.fromEntries(nextFiles.map((file) => [file.id, { tags: [] } satisfies DocumentMetadataInput]))
-    )
-    setValidations([])
+    setMetadataByFile(buildMetadataRecord(nextFiles))
     setProgressByFile({})
     setAbortControllersByFile({})
     setResult(null)
+    progressRef.current = {}
   }, [initialFiles, isOpen])
 
   useEffect(() => {
-    if (step !== 'submitting') return
+    setValidations(validateUploadFiles(files, ACCEPT, MAX_SIZE_BYTES, matchesAccept))
+  }, [files])
 
-    const timeoutId = window.setTimeout(() => {
-      const nextResult: UploadResult = { succeeded: [], failed: [], cancelled: [] }
+  useEffect(() => {
+    progressRef.current = progressByFile
+  }, [progressByFile])
+
+  useEffect(() => {
+    if (step !== 'submitting' || files.length === 0) return
+    if (!files.every((file) => abortControllersByFile[file.id])) return
+
+    let disposed = false
+    let progressSnapshot = progressRef.current
+
+    const updateProgress = (
+      fileId: string,
+      updater: (current: UploadProgress) => UploadProgress
+    ) => {
+      if (disposed) return
+
+      const target = progressSnapshot[fileId]
+      if (!target) return
+
+      progressSnapshot = {
+        ...progressSnapshot,
+        [fileId]: updater(target),
+      }
+      progressRef.current = progressSnapshot
+      setProgressByFile(progressSnapshot)
+    }
+
+    void (async () => {
+      const successIds: Record<string, { documentId: string; jobId: string }> = {}
+      const failureReasons: Record<string, string> = {}
+
+      await runWithConcurrency(files, 3, async (candidate) => {
+        const controller = abortControllersByFile[candidate.id]
+        if (!controller) {
+          failureReasons[candidate.id] = 'missing_abort_controller'
+          updateProgress(candidate.id, (current) => ({ ...current, state: 'FAILED' }))
+          return
+        }
+
+        updateProgress(candidate.id, (current) => ({
+          ...current,
+          state: 'UPLOADING',
+        }))
+
+        try {
+          const uploadResult = await documentService.uploadDocument(
+            projectId,
+            candidate.file,
+            metadataByFile[candidate.id] ?? createInitialMetadata(candidate.file),
+            {
+              onProgress: (loaded, total) => {
+                updateProgress(candidate.id, (current) => ({
+                  ...current,
+                  loadedBytes: loaded,
+                  totalBytes: total || current.totalBytes,
+                  state: 'UPLOADING',
+                }))
+              },
+              signal: controller.signal,
+            }
+          )
+
+          if (uploadResult.error) {
+            failureReasons[candidate.id] = uploadResult.error
+            updateProgress(candidate.id, (current) => ({
+              ...current,
+              state: 'FAILED',
+            }))
+            return
+          }
+
+          if (!uploadResult.data) {
+            failureReasons[candidate.id] = 'invalid_upload_response'
+            updateProgress(candidate.id, (current) => ({
+              ...current,
+              state: 'FAILED',
+            }))
+            return
+          }
+
+          updateProgress(candidate.id, (current) => ({
+            ...current,
+            loadedBytes: current.totalBytes,
+            state: 'SERVER_PROCESSING',
+          }))
+
+          const pollResult = await pollJob(uploadResult.data.jobId, {
+            intervalMs: 2000,
+            timeoutMs: 300000,
+            signal: controller.signal,
+          })
+
+          if (pollResult.status === 'COMPLETED') {
+            successIds[candidate.id] = {
+              documentId: uploadResult.data.documentId,
+              jobId: uploadResult.data.jobId,
+            }
+
+            updateProgress(candidate.id, (current) => ({
+              ...current,
+              loadedBytes: current.totalBytes,
+              state: 'SUCCEEDED',
+            }))
+            return
+          }
+
+          if (pollResult.status === 'ABORTED') {
+            updateProgress(candidate.id, (current) => ({
+              ...current,
+              state: 'CANCELLED',
+            }))
+            return
+          }
+
+          failureReasons[candidate.id] = pollResult.status === 'TIMEOUT'
+            ? 'timeout'
+            : (pollResult.error ?? 'polling_failed')
+
+          updateProgress(candidate.id, (current) => ({
+            ...current,
+            state: 'FAILED',
+          }))
+        } catch (error) {
+          if (error instanceof Error && error.name === 'AbortError') {
+            updateProgress(candidate.id, (current) => ({
+              ...current,
+              state: 'CANCELLED',
+            }))
+            return
+          }
+
+          failureReasons[candidate.id] = error instanceof Error ? error.message : 'upload_failed'
+          updateProgress(candidate.id, (current) => ({
+            ...current,
+            state: 'FAILED',
+          }))
+        }
+      })
+
+      if (disposed) return
+
+      const nextResult = computeUploadResult(progressSnapshot, successIds, failureReasons)
+      setAbortControllersByFile({})
       setResult(nextResult)
       setStep('result')
       onUploaded(nextResult)
-    }, 250)
+    })()
 
-    return () => window.clearTimeout(timeoutId)
-  }, [onUploaded, step])
+    return () => {
+      disposed = true
+      Object.values(abortControllersByFile).forEach((controller) => controller.abort())
+    }
+  }, [abortControllersByFile, files, metadataByFile, onUploaded, projectId, step])
 
   const hasValidationErrors = useMemo(
     () => validations.some((validation) => validation.severity === 'error'),
     [validations]
   )
-  const metadataCount = Object.keys(metadataByFile).length
-  const progressCount = Object.keys(progressByFile).length
-  const controllerCount = Object.keys(abortControllersByFile).length
-  const resultCount = result
-    ? result.succeeded.length + result.failed.length + result.cancelled.length
-    : 0
+
+  const handleFilesSelected = (selectedFiles: File[]) => {
+    const nextFiles = selectedFiles.map(toFileCandidate)
+    if (nextFiles.length === 0) return
+
+    setFiles((current) => [...current, ...nextFiles])
+    setMetadataByFile((current) => ({
+      ...current,
+      ...Object.fromEntries(nextFiles.map((file) => [file.id, createInitialMetadata(file.file)])),
+    }))
+  }
+
+  const handleRemoveFile = (fileId: string) => {
+    setFiles((current) => current.filter((file) => file.id !== fileId))
+    setMetadataByFile((current) => {
+      const { [fileId]: _removed, ...rest } = current
+      return rest
+    })
+    setValidations((current) => current.filter((validation) => validation.fileId !== fileId))
+    setProgressByFile((current) => {
+      const { [fileId]: _removed, ...rest } = current
+      return rest
+    })
+    setAbortControllersByFile((current) => {
+      current[fileId]?.abort?.()
+      const { [fileId]: _removed, ...rest } = current
+      return rest
+    })
+  }
+
+  const handleCancelFile = (fileId: string) => {
+    abortControllersByFile[fileId]?.abort?.()
+  }
+
+  const handleBulkApply = (partial: Partial<DocumentMetadataInput>) => {
+    setMetadataByFile((current) =>
+      Object.fromEntries(
+        files.map((file) => [
+          file.id,
+          mergeMetadata(current[file.id] ?? createInitialMetadata(file.file), partial, uniqueTags),
+        ])
+      )
+    )
+  }
+
+  const handleSubmit = () => {
+    const nextProgress = createInitialProgress(files)
+    progressRef.current = nextProgress
+    setAbortControllersByFile(
+      Object.fromEntries(files.map((file) => [file.id, new AbortController()]))
+    )
+    setProgressByFile(nextProgress)
+    setResult(null)
+    setStep('submitting')
+  }
+
+  const handleRetryFailed = () => {
+    const failedIds = new Set(result?.failed.map((item) => item.fileId) ?? [])
+    const retryFiles = files.filter((file) => failedIds.has(file.id) && file.file)
+    if (retryFiles.length === 0) return
+
+    setFiles(retryFiles)
+    setMetadataByFile((current) => buildMetadataRecord(retryFiles, current))
+    setProgressByFile({})
+    setAbortControllersByFile({})
+    setResult(null)
+    progressRef.current = {}
+    setStep('metadata')
+  }
 
   const requestClose = () => {
     if ((step === 'metadata' || step === 'submitting')
-      && !window.confirm('Upload in progress — close anyway?')) {
+      && !window.confirm('Upload is in progress. Close anyway?')) {
       return
     }
     onClose()
@@ -117,18 +354,11 @@ export function UploadDrawer({
       />
 
       <div className="absolute inset-y-0 right-0 flex w-full justify-end">
-        <section
-          className="flex h-full w-full flex-col border-l border-slate-200 bg-white shadow-xl md:w-[480px]"
-          data-file-count={files.length}
-          data-metadata-count={metadataCount}
-          data-progress-count={progressCount}
-          data-controller-count={controllerCount}
-          data-result-count={resultCount}
-        >
+        <section className="flex h-full w-full flex-col border-l border-slate-200 bg-white shadow-xl md:w-[480px]">
           <header className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
             <div>
               <p className="text-sm font-semibold text-slate-900">Upload to {projectId}</p>
-              <p className="text-xs text-slate-500">Stage 5 shell only</p>
+              <p className="text-xs text-slate-500">Add files, validate, tag, and simulate upload progress.</p>
             </div>
             <Button variant="ghost" size="sm" onClick={requestClose}>
               Close
@@ -154,10 +384,35 @@ export function UploadDrawer({
               })}
             </ol>
 
-            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
-              <div data-step={step} className="text-sm font-medium capitalize text-slate-700">
-                {step}
-              </div>
+            <div className="space-y-4" data-step={step}>
+              {step === 'select' ? (
+                <>
+                  <FileDropzone accept={ACCEPT} maxSizeBytes={MAX_SIZE_BYTES} onFiles={handleFilesSelected} />
+                  <UploadFileList files={files} onRemove={handleRemoveFile} />
+                </>
+              ) : null}
+
+              {step === 'validate' ? (
+                <UploadValidationList validations={validations} onDismissFile={handleRemoveFile} />
+              ) : null}
+
+              {step === 'metadata' ? (
+                <UploadMetadataForm
+                  files={files}
+                  values={metadataByFile}
+                  availableTags={[]}
+                  onChange={(fileId, next) => setMetadataByFile((current) => ({ ...current, [fileId]: next }))}
+                  onBulkApply={handleBulkApply}
+                />
+              ) : null}
+
+              {step === 'submitting' ? (
+                <UploadProgressList files={files} progressByFile={progressByFile} onCancel={handleCancelFile} />
+              ) : null}
+
+              {step === 'result' && result ? (
+                <UploadResultSummary result={result} onRetryFailed={handleRetryFailed} onGoToDocuments={onClose} onClose={onClose} />
+              ) : null}
             </div>
           </div>
 
@@ -184,31 +439,25 @@ export function UploadDrawer({
                 <Button variant="secondary" onClick={goBack}>
                   Back
                 </Button>
-                <Button onClick={() => setStep('submitting')} disabled={files.length > 0 && metadataCount < files.length}>
+                <Button onClick={handleSubmit} disabled={files.length === 0}>
                   Submit
                 </Button>
               </>
             ) : null}
 
             {step === 'submitting' ? (
-              <Button variant="secondary" onClick={() => {}}>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  Object.values(progressByFile)
+                    .filter((progress) => progress.state !== 'SUCCEEDED' && progress.state !== 'FAILED' && progress.state !== 'CANCELLED')
+                    .forEach((progress) => handleCancelFile(progress.fileId))
+                }}
+              >
                 Cancel all
               </Button>
             ) : null}
 
-            {step === 'result' ? (
-              <>
-                <Button variant="secondary" onClick={() => {}}>
-                  Retry failed
-                </Button>
-                <Button onClick={onClose}>
-                  Go to documents
-                </Button>
-                <Button variant="ghost" onClick={onClose}>
-                  Close
-                </Button>
-              </>
-            ) : null}
           </footer>
         </section>
       </div>
