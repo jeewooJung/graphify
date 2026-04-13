@@ -60,6 +60,8 @@ function mapProjectDetailPayload(rawValue: unknown) {
 
 async function getDocumentsCount(projectId: string) {
   try {
+    // Use direct fetch instead of the api helper because we need total-count/x-total-count
+    // response headers here, and client.ts does not expose response headers.
     const response = await fetch(
       `/api/backend/projects/${encodeURIComponent(projectId)}/documents?limit=0`,
       { credentials: 'include' }

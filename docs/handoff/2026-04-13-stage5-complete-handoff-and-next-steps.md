@@ -91,8 +91,9 @@
 | 3 | FE-3-1 ~ FE-3-15 (15개) | ✅ | `web-app/types/chat.ts` + 14개 Chat 컴포넌트 + `/chat`, `/chat/:sessionId` 페이지 |
 | 4 | FE-4-1 ~ FE-4-8 (8개) | ✅ | `web-app/types/document.ts` + 9개 Documents 컴포넌트 + 5개 Project 허브 컴포넌트 + 2개 페이지 |
 | 5 | FE-5-1 ~ FE-5-10 (10개) | ✅ | Upload 드로어 shell + 6개 스텝 컴포넌트 + `document-service.ts`(XHR) + `job-service.ts`(pollJob) + 실제 wiring |
+| 6 (부분) | FE-6-1, FE-6-2, FE-6-4, FE-6-6 (4개) | 🟡 | BFF multipart streaming fix + chat-service + document-service 확장 + project-service 확장 |
 
-**총 41개 태스크 완료** (Stage 6/7/8의 6+6+5=17개 남음)
+**총 45개 태스크 완료** (Stage 6 중 FE-6-3/6-5 2개 + Stage 7/8의 6+5=11개, 합계 13개 남음)
 
 ### 2.2 생성된 주요 파일 트리
 
@@ -198,24 +199,39 @@ Stage 1~5의 모든 페이지/컴포넌트는 **inline mock 데이터** 기반�
 
 Stage 6~8이 남았다. 각 Stage는 [../2026-04-13-frontend-task-breakdown.md](../2026-04-13-frontend-task-breakdown.md)의 해당 섹션에 태스크 단위로 쪼개져 있다.
 
-### 4.1 Stage 6 — API 연결 (6 tasks, 크리티컬)
+### 4.1 Stage 6 — API 연결 (4/6 완료, 2개 남음)
 
-우선순위 높음. 다음 순서 권장:
+**✅ 완료** (Batch 6A, 6B)
 
-1. **FE-6-1. BFF 프록시 라우트 정비**
-   - 변경: `web-app/app/api/backend/[...path]/route.ts` (+ 필요 시 `web-app/app/api/backend/chat/*` 신설)
-   - 신규 엔드포인트 투명 프록시 + 백엔드 미구현 엔드포인트는 `501 Not Implemented` stub
-2. **FE-6-2. 채팅 세션 목록 연결** — `chat-service.ts` 신설, `/chat` 실 데이터 주입
-3. **FE-6-3. 메시지 목록/전송 연결** — `GET/POST /api/backend/chat/sessions/:id/messages`, `POST /api/backend/chat/answer`
-4. **FE-6-4. 문서 목록/상세/삭제 연결** — `document-service.ts` 확장
-5. **FE-6-5. 업로드 BFF 모의 응답 제거 및 실 백엔드 연결** — FE-5-9/5-10이 이미 호출하는 경로의 실 프록시 전환
-6. **FE-6-6. 프로젝트 상세 집계 API 연결** — `project-service.ts` 확장 (detail/documents/jobs/sessions 병렬 호출 조합)
+- FE-6-1. BFF 프록시 라우트 정비 — `web-app/app/api/backend/[...path]/route.ts`
+  - multipart/form-data streaming 안전성 확보(`request.body` 스트림 포워딩 + `duplex: 'half'`)
+  - `PATCH`, `OPTIONS` 메서드 추가
+  - 501 stub은 넣지 않음(투명 프록시가 백엔드 원본 응답 그대로 전달)
+- FE-6-2. 채팅 세션 CRUD + 메시지/답변 — `web-app/lib/api/chat-service.ts` (신규)
+  - `getSessions, getSession, createSession, getMessages, postMessage, answer`
+  - 메시지 role 기준 discriminated union 매핑
+- FE-6-4. 문서 목록/상세/청크/삭제 — `web-app/lib/api/document-service.ts` 확장
+  - `getProjectDocuments, getDocument, getDocumentChunks, deleteDocument` 추가
+  - 배열 필터(statuses/docTypes/tags) 반복 쿼리 파라미터 직렬화
+  - 기존 `uploadDocument, runWithConcurrency` 보존
+- FE-6-6. 프로젝트 집계 — `web-app/lib/api/project-service.ts` 확장
+  - `getProjectDetail, getProjectMetrics, getProjectSummary` 추가
+  - `getProjectSummary`는 detail+metrics+recentDocs+recentSessions를 `Promise.all`로 병렬
+  - `getProjectMetrics`는 total-count 헤더 접근을 위해 직접 fetch 사용(주석 명시)
+  - 기존 CRUD 메서드 보존
 
-배치 전략:
-- Batch 6A: FE-6-1 단독 (BFF 기반)
-- Batch 6B: FE-6-2, 6-4, 6-6 병렬 (독립 서비스들)
-- Batch 6C: FE-6-3 (FE-6-2 의존)
-- Batch 6D: FE-6-5 (FE-6-1 + FE-5-10 의존)
+**🔵 남은 작업** (Batch 6C, 6D)
+
+- **FE-6-3. 메시지/답변 UI wiring** — `chat-service`는 있으나 `/chat`, `/chat/:sessionId` 페이지가 아직 mock 데이터 사용.
+  - `/chat/page.tsx`: `chatService.getSessions({ limit: 10 })` 호출 → 최근 세션 렌더. 전송 시 `chatService.createSession` + `answer` 조합 또는 `createSession + postMessage`.
+  - `/chat/[sessionId]/page.tsx`: `chatService.getSession` + `getMessages`로 초기 로드. composer 전송 시 `postMessage` 낙관적 append.
+  - 의존: FE-6-1, FE-6-2. 상태: 서비스 레이어 준비 완료, UI 연결만 남음.
+- **FE-6-5. 업로드 BFF 모의 응답 제거 및 실 백엔드 연결**
+  - `document-service.uploadDocument`와 `job-service.pollJob`은 이미 실 HTTP 호출 코드. Batch 6A에서 multipart streaming이 고쳐졌으므로 별도 코드 변경 불필요할 가능성.
+  - 작업 내용: 백엔드의 실제 `POST /projects/:id/documents` 및 `GET /jobs/:id` 계약 확인 후 필요 시 어댑터 추가. 로컬에서 실제 업로드 smoke test 수행.
+  - 의존: FE-5-10, FE-6-1. 상태: 코드 자체는 이미 준비됨, 백엔드 계약 검증 단계.
+
+추가로 문서 리스트/프로젝트 허브 페이지도 실 데이터 wiring이 필요하지만, FE-6-4/6-6 서비스는 준비되었으므로 페이지별로 1개 태스크씩 분리하거나 통합 배치(`Batch 6E: 페이지 실 데이터 wiring`)로 묶어 진행하면 된다.
 
 ### 4.2 Stage 7 — 상태 처리 (6 tasks)
 
@@ -282,6 +298,36 @@ Stage 8 이전에 `npm install`이 반드시 선행되어야 함(jest + playwrig
 ## 7. 한 줄 요약
 
 ```text
-설계 4문서 완성(리뷰 29건) + Stage 1~5 구현 완료(41/58 태스크, 코드 리뷰 5건).
-다음은 Stage 6(API 연결) — FE-6-1 BFF 프록시부터 시작하면 됨.
+설계 4문서 완성(리뷰 29건) + Stage 1~5 + Stage 6 절반 완료(45/58 태스크).
+다음은 FE-6-3(채팅 페이지 실 데이터 wiring) 및 FE-6-5(업로드 smoke test) 2개 후
+문서/프로젝트 페이지 mock → 실 데이터 전환 배치.
 ```
+
+## 8. 세션 재개 시 바로 복사 가능한 codex 프롬프트 샘플
+
+Batch 6C (FE-6-3) 시작용:
+
+```text
+Implement FE-6-3: wire /chat/page.tsx and /chat/[sessionId]/page.tsx to use
+web-app/lib/api/chat-service.ts instead of mock data.
+
+Prereqs in place:
+- web-app/lib/api/chat-service.ts with getSessions, getSession, createSession, getMessages, postMessage, answer.
+- Pages currently use inline mock (see /chat/page.tsx mockSessions, /chat/[sessionId]/page.tsx mockMessages).
+
+Replace:
+1. /chat/page.tsx: on mount call chatService.getSessions({ limit: 10 }).
+   Render ChatSessionList with the fetched sessions + loading/error states.
+   On submit: await chatService.createSession({ scope, title: input.content.slice(0,60) })
+   then router.push(ROUTES.chatSession(created.id)).
+2. /chat/[sessionId]/page.tsx: on mount Promise.all [getSession, getMessages].
+   Replace mockMessages state init. On composer submit:
+   optimistic append user message → chatService.postMessage(sessionId, { content })
+   → on result append { user, answer }. Handle error with toast/alert.
+
+Keep ChatLayout, SourcePanel, citation click behavior, deep-link navigation unchanged.
+Do NOT modify components — only pages.
+
+Verification: eslint + manual read of both pages.
+```
+
