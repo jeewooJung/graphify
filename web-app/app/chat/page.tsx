@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChatLayout, ChatSessionList, ChatWelcomeState } from '@/components/chat'
 import { chatService } from '@/lib/api/chat-service'
+import { useUser } from '@/lib/auth/user-context'
 import { ROUTES } from '@/lib/routes'
 import type {
   ChatAnswerRequest,
   ChatSessionSummary,
   ProjectOption,
+  ScopeKind,
   SuggestedQuestion,
   TeamOption,
 } from '@/types/chat'
@@ -31,10 +33,12 @@ const mockSuggestions: SuggestedQuestion[] = [
 
 export default function ChatPage() {
   const router = useRouter()
+  const { user } = useUser()
   const [sessions, setSessions] = useState<ChatSessionSummary[]>([])
   const [isLoadingSessions, setIsLoadingSessions] = useState(true)
   const [sessionsError, setSessionsError] = useState<string>()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const disabledKinds: ScopeKind[] = user?.role === 'viewer' ? ['TEAM', 'PROJECT'] : []
 
   useEffect(() => {
     let isActive = true
@@ -120,7 +124,7 @@ export default function ChatPage() {
           defaultScope={{ kind: 'WORKSPACE' }}
           projects={mockProjects}
           teams={mockTeams}
-          disabledKinds={[]}
+          disabledKinds={disabledKinds}
           suggestions={mockSuggestions}
           isSubmitting={isSubmitting}
           onSubmit={handleSubmit}

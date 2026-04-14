@@ -92,8 +92,15 @@
 | 4 | FE-4-1 ~ FE-4-8 (8개) | ✅ | `web-app/types/document.ts` + 9개 Documents 컴포넌트 + 5개 Project 허브 컴포넌트 + 2개 페이지 |
 | 5 | FE-5-1 ~ FE-5-10 (10개) | ✅ | Upload 드로어 shell + 6개 스텝 컴포넌트 + `document-service.ts`(XHR) + `job-service.ts`(pollJob) + 실제 wiring |
 | 6 | FE-6-1 ~ FE-6-6 (6개) | ✅ | BFF multipart streaming fix + 3개 서비스(chat/document/project) + 2개 채팅 페이지 실 데이터 wiring + 2개 프로젝트 페이지 실 데이터 wiring |
+| 7 | FE-7-1 ~ FE-7-6 (6개) | ✅ | ErrorView + 4개 error.tsx 경계 + Skeleton + 권한 주입 + 근거 부족 CTA + 폴링 끊김 배너 |
 
-**총 47개 태스크 완료** (Stage 7/8의 6+5=11개 남음)
+**총 53개 태스크 완료** (Stage 8의 5개 남음)
+
+Stage 7 세부 완료 내역:
+- **Batch 7A**: FE-7-1 `ErrorView` (6개 statusCode, Korean defaults) + FE-7-2 4개 `error.tsx` 경계
+- **Batch 7B**: FE-7-3 `Skeleton` 프리미티브 + 페이지 로딩 스켈레톤 통일 + FE-7-4 페이지 레벨 권한 주입(`disabledKinds`, `canUpload`, `readOnly`)
+- **Batch 7C**: FE-7-5 근거 부족 CTA (빈 citations + `insufficient_evidence` 시스템 메시지) + FE-7-6 `PollingDisconnectedBanner` + 5초 간격 폴링(active docs only, 3연속 실패 시 stale, unmount cleanup)
+- **권한 누수 수정**: `onAsk`/`onOpenChat`에 `canScopeToProject` 게이트 추가 — viewer는 프로젝트 스코프 chat 진입 불가(Workspace로 fallback)
 
 Stage 6 세부 완료 내역:
 - **Batch 6A**: FE-6-1 BFF 프록시 multipart streaming 안전성 + PATCH/OPTIONS 추가
@@ -305,8 +312,8 @@ Stage 8 이전에 `npm install`이 반드시 선행되어야 함(jest + playwrig
 ## 7. 한 줄 요약
 
 ```text
-설계 4문서 완성(리뷰 29건) + Stage 1~6 전체 완료(47/58 태스크, 81%).
-다음은 Stage 7(상태 처리 6개) → Stage 8(테스트 5개) — 남은 11개 태스크.
+설계 4문서 완성(리뷰 29건) + Stage 1~7 전체 완료(53/58 태스크, 91%).
+다음은 Stage 8 (e2e 테스트 4개 + 단위 테스트 1개, 5개 태스크) — npm install 필수.
 ```
 
 ## 8. 세션 재개 시 바로 복사 가능한 codex 프롬프트 샘플

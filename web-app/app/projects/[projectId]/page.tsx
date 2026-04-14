@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { Skeleton } from '@/components/feedback'
 import {
   ProjectCtaRow,
   ProjectDetailHeader,
@@ -12,6 +13,7 @@ import {
 import { EmptyDocumentsState } from '@/components/documents'
 import { UploadDrawer } from '@/components/upload/UploadDrawer'
 import { projectService } from '@/lib/api/project-service'
+import { useUser } from '@/lib/auth/user-context'
 import { ROUTES } from '@/lib/routes'
 import type { ChatSessionSummary } from '@/types/chat'
 import type { DocumentSummary, ProjectDetail, ProjectMetrics } from '@/types/document'
@@ -26,11 +28,14 @@ type ProjectPageSummary = {
 export default function ProjectPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const router = useRouter()
+  const { user } = useUser()
   const [summary, setSummary] = useState<ProjectPageSummary>()
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string>()
   const [isUploadOpen, setIsUploadOpen] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
+  const canUpload = user?.role === 'admin' || user?.role === 'editor'
+  const canScopeToProject = user?.role !== 'viewer'
 
   useEffect(() => {
     let ignore = false
@@ -53,7 +58,7 @@ export default function ProjectPage() {
     }
   }, [projectId, reloadKey])
 
-  const onAsk = () => router.push(`/chat?scope=project&projectId=${projectId}`)
+  const onAsk = () => router.push(canScopeToProject ? `/chat?scope=project&projectId=${projectId}` : '/chat')
   const onOpenDocuments = () => router.push(ROUTES.projectDocuments(projectId))
   const onOpenUpload = () => setIsUploadOpen(true)
   const onSelectDocument = (doc: DocumentSummary) => router.push(`${ROUTES.projectDocuments(projectId)}?documentId=${doc.id}`)
@@ -67,12 +72,14 @@ export default function ProjectPage() {
   if (isLoading && !summary) {
     return (
       <div className="page-shell space-y-6">
-        <div className="h-28 animate-pulse rounded-3xl bg-surface-hover" />
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-28 animate-pulse rounded-3xl bg-surface-hover" />)}</div>
-        <div className="h-24 animate-pulse rounded-3xl bg-surface-hover" />
+        <Skeleton width="50%" height={64} rounded="lg" />
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} height={112} rounded="lg" />)}
+        </div>
+        <Skeleton width={320} height={40} rounded="full" />
         <div className="grid gap-6 md:grid-cols-2">
-          <div className="h-80 animate-pulse rounded-3xl bg-surface-hover" />
-          <div className="h-80 animate-pulse rounded-3xl bg-surface-hover" />
+          <Skeleton height={192} rounded="lg" />
+          <Skeleton height={192} rounded="lg" />
         </div>
       </div>
     )
@@ -96,14 +103,14 @@ export default function ProjectPage() {
     <div className="page-shell space-y-6">
       <ProjectDetailHeader project={summary.detail} canEdit onEdit={() => console.log('Edit project', projectId)} />
       <ProjectMetricCards metrics={summary.metrics} isLoading={false} />
-      <ProjectCtaRow projectId={projectId} canUpload onAsk={onAsk} onOpenDocuments={onOpenDocuments} onOpenUpload={onOpenUpload} />
+      <ProjectCtaRow projectId={projectId} canUpload={canUpload} onAsk={onAsk} onOpenDocuments={onOpenDocuments} onOpenUpload={onOpenUpload} />
 
       <div className="grid gap-6 md:grid-cols-2">
         <RecentProjectUploads documents={summary.recentDocuments} isLoading={false} onSelect={onSelectDocument} onOpenAll={onOpenDocuments} />
         <RecentProjectChatSessions sessions={summary.recentSessions} isLoading={false} onSelect={onSelectSession} onStartNew={onStartNew} />
       </div>
 
-      {summary.recentDocuments.length === 0 ? <EmptyDocumentsState canUpload onOpenUpload={onOpenUpload} onFilesDropped={() => setIsUploadOpen(true)} /> : null}
+      {summary.recentDocuments.length === 0 ? <EmptyDocumentsState canUpload={canUpload} onOpenUpload={onOpenUpload} onFilesDropped={() => setIsUploadOpen(true)} /> : null}
       <UploadDrawer isOpen={isUploadOpen} projectId={projectId} onClose={() => setIsUploadOpen(false)} onUploaded={onUploaded} />
     </div>
   )

@@ -1,11 +1,13 @@
 'use client'
 
 import { AlertCircle, Info, Shield } from 'lucide-react'
+import { Button } from '@/components/ui'
 import type { SystemMessage, UserMessage } from '@/types/chat'
 
 type ChatMessageProps = {
   message: UserMessage | SystemMessage
   variant: 'user' | 'system'
+  onUploadSuggested?: () => void
 }
 
 const SYSTEM_STYLES = {
@@ -23,7 +25,11 @@ const SYSTEM_STYLES = {
   },
 }
 
-export function ChatMessage({ message, variant }: ChatMessageProps) {
+export function ChatMessage({
+  message,
+  variant,
+  onUploadSuggested,
+}: ChatMessageProps) {
   if (variant === 'user' && message.role === 'user') {
     return (
       <div className="flex justify-end">
@@ -37,11 +43,20 @@ export function ChatMessage({ message, variant }: ChatMessageProps) {
   if (variant === 'system' && message.role === 'system') {
     const tone = SYSTEM_STYLES[message.variant]
     const Icon = tone.icon
+    const showUploadAction = message.variant === 'insufficient_evidence' && onUploadSuggested
+
     return (
       <div className="flex justify-center">
         <div className={`flex max-w-[720px] items-start gap-3 rounded-2xl border px-4 py-3 text-sm ${tone.className}`}>
           <Icon className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>{message.content}</p>
+          <div className="space-y-3">
+            <p>{message.content}</p>
+            {showUploadAction ? (
+              <Button type="button" variant="secondary" size="sm" onClick={onUploadSuggested}>
+                문서 업로드
+              </Button>
+            ) : null}
+          </div>
         </div>
       </div>
     )

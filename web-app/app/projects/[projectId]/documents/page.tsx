@@ -1,27 +1,32 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { Skeleton } from '@/components/feedback'
 import {
   DocumentFilters,
   DocumentList,
   DocumentSummaryPanel,
   EmptyDocumentsState,
   FailedDocumentNotice,
+  PollingDisconnectedBanner,
   ProjectDocumentsHeader,
 } from '@/components/documents'
 import { UploadDrawer } from '@/components/upload/UploadDrawer'
 import { documentService } from '@/lib/api/document-service'
 import { projectService } from '@/lib/api/project-service'
+import { useUser } from '@/lib/auth/user-context'
 import type {
   DocumentChunk,
   DocumentDetail,
   DocumentFilterState,
+  DocumentStatus,
   DocumentSummary,
   ProjectSummary,
 } from '@/types/document'
 
 const INITIAL_FILTER: DocumentFilterState = { statuses: [], docTypes: [], tags: [], query: '' }
+const ACTIVE_DOCUMENT_STATUSES: DocumentStatus[] = ['QUEUED', 'PARSING', 'INDEXING']
 
 function getDocType(document: DocumentSummary) {
   const ext = document.originalFilename.split('.').pop()?.toUpperCase()
@@ -42,6 +47,7 @@ export default function ProjectDocumentsPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { user } = useUser()
   const listRef = useRef<HTMLDivElement>(null)
   const deepLinkedDocumentId = searchParams.get('documentId') ?? undefined
   const highlightChunkId = searchParams.get('chunkId') ?? undefined
@@ -59,6 +65,13 @@ export default function ProjectDocumentsPage() {
   const [isUploadOpen, setIsUploadOpen] = useState(false)
   const [listReloadKey, setListReloadKey] = useState(0)
   const [detailReloadKey, setDetailReloadKey] = useState(0)
+  const [pollingState, setPollingState] = useState<'healthy' | 'stale'>('healthy')
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
+  const canUpload = user?.role === 'admin' || user?.role === 'editor'
+  const canScopeToProject = user?.role !== 'viewer'
+  const activeDocumentCount = documents.filter((document) => ACTIVE_DOCUMENT_STATUSES.includes(document.status)).length
+  const hasActiveDocuments = activeDocumentCount > 0
+  const isPollingStale = pollingState === 'stale' && consecutiveFailures >= 3
 
   useEffect(() => {
     setSelectedDocumentId(deepLinkedDocumentId)
@@ -141,6 +154,48 @@ export default function ProjectDocumentsPage() {
     return () => window.cancelAnimationFrame(frame)
   }, [deepLinkedDocumentId, selectedDocumentId])
 
+  const pollInProgressDocuments = useCallback(async () => {
+    const res = await documentService.getProjectDocuments(projectId, {
+      statuses: ACTIVE_DOCUMENT_STATUSES,
+    })
+
+    if (res.error) {
+      setConsecutiveFailures((current) => {
+        const next = current + 1
+        setPollingState(next >= 3 ? 'stale' : 'healthy')
+        return next
+      })
+      return false
+    }
+
+    setDocuments((current) => {
+      const updates = new Map((res.data ?? []).map((document) => [document.id, document]))
+      return current.map((document) => updates.get(document.id) ?? document)
+    })
+    if ((res.data ?? []).length < activeDocumentCount) {
+      setListReloadKey((current) => current + 1)
+    }
+    setConsecutiveFailures(0)
+    setPollingState('healthy')
+    return true
+  }, [activeDocumentCount, projectId])
+
+  useEffect(() => {
+    if (isLoadingList || !hasActiveDocuments) {
+      setConsecutiveFailures(0)
+      setPollingState('healthy')
+      return
+    }
+
+    const intervalId = window.setInterval(() => {
+      void pollInProgressDocuments()
+    }, 5000)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [hasActiveDocuments, isLoadingList, pollInProgressDocuments])
+
   const availableTags = useMemo(() => Array.from(new Set(documents.flatMap((item) => item.tags))).sort(), [documents])
   const filteredDocs = useMemo(() => {
     const query = filter.query?.trim().toLowerCase()
@@ -158,6 +213,7 @@ export default function ProjectDocumentsPage() {
   }, [documents, filter])
   const failedCount = filteredDocs.filter((document) => document.status === 'FAILED').length
   const headerProject = project ?? { id: projectId, name: 'Project documents', status: 'active' as const }
+  const showHeaderSkeleton = isLoadingList && !project && !projectError
 
   async function onDelete(id: string) {
     if (!window.confirm('\uC774 \uBB38\uC11C\uB97C \uC0AD\uC81C\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?')) return
@@ -189,15 +245,20 @@ export default function ProjectDocumentsPage() {
 
   return (
     <div className="page-shell">
-      <ProjectDocumentsHeader project={headerProject} totalCount={documents.length} canUpload onOpenUpload={() => setIsUploadOpen(true)} />
+      {showHeaderSkeleton ? (
+        <Skeleton height={88} rounded="lg" />
+      ) : (
+        <ProjectDocumentsHeader project={headerProject} totalCount={documents.length} canUpload={canUpload} onOpenUpload={() => setIsUploadOpen(true)} />
+      )}
       {projectError && !listError ? <div className="mb-4"><RetryBanner message={projectError} onRetry={() => setListReloadKey((prev) => prev + 1)} /></div> : null}
+      {isPollingStale ? <div className="mb-4"><PollingDisconnectedBanner visible onRetry={() => { void pollInProgressDocuments() }} /></div> : null}
       {failedCount > 0 ? <FailedDocumentNotice failedCount={failedCount} onFilterFailed={() => setFilter((prev) => ({ ...prev, statuses: ['FAILED'] }))} /> : null}
-      <DocumentFilters value={filter} availableTags={availableTags} onChange={setFilter} />
+      {showHeaderSkeleton ? null : <DocumentFilters value={filter} availableTags={availableTags} onChange={setFilter} />}
       {listError && !projectError ? <div className="mt-4"><RetryBanner message={listError} onRetry={() => setListReloadKey((prev) => prev + 1)} /></div> : null}
 
       {filteredDocs.length === 0 && !isLoadingList && documents.length === 0 && !listError ? (
         <div className="flex min-h-[460px] items-center justify-center">
-          <div className="w-full max-w-4xl"><EmptyDocumentsState canUpload onOpenUpload={() => setIsUploadOpen(true)} onFilesDropped={() => setIsUploadOpen(true)} /></div>
+          <div className="w-full max-w-4xl"><EmptyDocumentsState canUpload={canUpload} onOpenUpload={() => setIsUploadOpen(true)} onFilesDropped={() => setIsUploadOpen(true)} /></div>
         </div>
       ) : (
         <div className="mt-4 grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(360px,1.05fr)]">
@@ -212,6 +273,7 @@ export default function ProjectDocumentsPage() {
               onLoadMore={() => {}}
               onRerun={() => window.alert('\uC7AC\uC2E4\uD589 API \uBBF8\uAD6C\uD604')}
               onDelete={onDelete}
+              readOnly={!canUpload}
             />
           </div>
           <div className="space-y-3">
@@ -222,13 +284,13 @@ export default function ProjectDocumentsPage() {
               highlightChunkId={highlightChunkId}
               isLoading={isLoadingDetail}
               error={detailError ? new Error(detailError) : undefined}
-              onOpenChat={(docId) => router.push(`/chat?scope=project&projectId=${projectId}&documentId=${docId}`)}
+              onOpenChat={(docId) => router.push(canScopeToProject ? `/chat?scope=project&projectId=${projectId}&documentId=${docId}` : '/chat')}
             />
           </div>
         </div>
       )}
 
-      <UploadDrawer isOpen={isUploadOpen} projectId={projectId} onClose={() => setIsUploadOpen(false)} onUploaded={onUploaded} />
+      {canUpload ? <UploadDrawer isOpen={isUploadOpen} projectId={projectId} onClose={() => setIsUploadOpen(false)} onUploaded={onUploaded} /> : null}
     </div>
   )
 }

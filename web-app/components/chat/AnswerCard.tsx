@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { AlertCircle } from 'lucide-react'
 import { Badge, Button, Card } from '@/components/ui'
 import { CitationList } from './CitationList'
 import { SuggestedFollowUps } from './SuggestedFollowUps'
@@ -15,6 +16,7 @@ type AnswerCardProps = {
   messageId: string
   onSelectCitation: (ref: CitationRef) => void
   onFollowUpSelect: (text: string) => void
+  onUploadSuggested?: () => void
   onNavigate: (target: NavigationTarget) => void
 }
 
@@ -22,6 +24,8 @@ const COLLAPSE_THRESHOLD = 1200
 const OPEN_DOCUMENT_LABEL = '\uBB38\uC11C \uC5F4\uAE30'
 const GO_TO_SEARCH_LABEL = '\uAC80\uC0C9\uC73C\uB85C \uC774\uB3D9'
 const VIEW_IN_GRAPH_LABEL = '\uADF8\uB798\uD504\uC5D0\uC11C \uBCF4\uAE30'
+const MISSING_EVIDENCE_LABEL = '근거가 되는 문서를 찾지 못했습니다'
+const UPLOAD_RELATED_DOCUMENTS_LABEL = '관련 문서 업로드'
 
 function formatRelativeTime(value: string) {
   const date = new Date(value)
@@ -63,9 +67,11 @@ export function AnswerCard({
   messageId,
   onSelectCitation,
   onFollowUpSelect,
+  onUploadSuggested,
   onNavigate,
 }: AnswerCardProps) {
   const [expanded, setExpanded] = useState(false)
+  const hasCitations = answer.citations.length > 0
   const shouldCollapse = answer.content.length > COLLAPSE_THRESHOLD
   const visibleContent = shouldCollapse && !expanded
     ? `${answer.content.slice(0, COLLAPSE_THRESHOLD).trimEnd()}...`
@@ -77,6 +83,20 @@ export function AnswerCard({
   return (
     <Card className="mx-auto w-full max-w-[720px] p-5">
       <div className="space-y-5">
+        {!hasCitations ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-warning-500/30 bg-warning-500/10 px-4 py-3 text-sm text-text-primary">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-warning-600" />
+              <span>{MISSING_EVIDENCE_LABEL}</span>
+            </div>
+            {onUploadSuggested ? (
+              <Button type="button" variant="secondary" size="sm" onClick={onUploadSuggested}>
+                {UPLOAD_RELATED_DOCUMENTS_LABEL}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="flex flex-wrap items-center gap-2 text-xs text-text-tertiary">
           <span className="font-medium text-text-primary">{answer.modelName}</span>
           <span aria-hidden="true">&middot;</span>

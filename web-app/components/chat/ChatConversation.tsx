@@ -16,6 +16,7 @@ type ChatConversationProps = {
   messages: ConversationMessage[]
   isStreaming: boolean
   error?: Error
+  onUploadSuggested?: () => void
   onSelectCitation: (ref: CitationRef) => void
   onFollowUp: (text: string) => void
   onNavigate: (target: NavigationTarget) => void
@@ -28,6 +29,7 @@ export function ChatConversation({
   messages,
   isStreaming,
   error,
+  onUploadSuggested,
   onSelectCitation,
   onFollowUp,
   onNavigate,
@@ -53,6 +55,7 @@ export function ChatConversation({
                 messageId={message.id}
                 onSelectCitation={onSelectCitation}
                 onFollowUpSelect={onFollowUp}
+                onUploadSuggested={onUploadSuggested}
                 onNavigate={onNavigate}
               />
             )
@@ -64,6 +67,7 @@ export function ChatConversation({
                 key={message.id}
                 message={message}
                 variant="system"
+                onUploadSuggested={onUploadSuggested}
               />
             )
           }
