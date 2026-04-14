@@ -91,9 +91,16 @@
 | 3 | FE-3-1 ~ FE-3-15 (15개) | ✅ | `web-app/types/chat.ts` + 14개 Chat 컴포넌트 + `/chat`, `/chat/:sessionId` 페이지 |
 | 4 | FE-4-1 ~ FE-4-8 (8개) | ✅ | `web-app/types/document.ts` + 9개 Documents 컴포넌트 + 5개 Project 허브 컴포넌트 + 2개 페이지 |
 | 5 | FE-5-1 ~ FE-5-10 (10개) | ✅ | Upload 드로어 shell + 6개 스텝 컴포넌트 + `document-service.ts`(XHR) + `job-service.ts`(pollJob) + 실제 wiring |
-| 6 (부분) | FE-6-1, FE-6-2, FE-6-4, FE-6-6 (4개) | 🟡 | BFF multipart streaming fix + chat-service + document-service 확장 + project-service 확장 |
+| 6 | FE-6-1 ~ FE-6-6 (6개) | ✅ | BFF multipart streaming fix + 3개 서비스(chat/document/project) + 2개 채팅 페이지 실 데이터 wiring + 2개 프로젝트 페이지 실 데이터 wiring |
 
-**총 45개 태스크 완료** (Stage 6 중 FE-6-3/6-5 2개 + Stage 7/8의 6+5=11개, 합계 13개 남음)
+**총 47개 태스크 완료** (Stage 7/8의 6+5=11개 남음)
+
+Stage 6 세부 완료 내역:
+- **Batch 6A**: FE-6-1 BFF 프록시 multipart streaming 안전성 + PATCH/OPTIONS 추가
+- **Batch 6B**: FE-6-2 chat-service 신규, FE-6-4 document-service 확장, FE-6-6 project-service 확장(`getProjectSummary` 병렬 집계 포함)
+- **Batch 6C**: FE-6-3 `/chat`, `/chat/:sessionId` 페이지를 chatService로 실 데이터 wiring(낙관적 메시지 추가, 에러 시 롤백)
+- **Batch 6E**: 문서/프로젝트 페이지 mock → 실 데이터 전환 (deep-link 유지, 삭제/업로드 후 refetch, 필터 유지)
+- **FE-6-5**: 업로드 실 API는 FE-5-9/5-10에서 이미 코드 완성. Batch 6A의 multipart streaming 수정으로 실질 wiring 완료. 백엔드 계약 검증은 Stage 7 이후 수동 smoke test로 확인.
 
 ### 2.2 생성된 주요 파일 트리
 
@@ -298,9 +305,8 @@ Stage 8 이전에 `npm install`이 반드시 선행되어야 함(jest + playwrig
 ## 7. 한 줄 요약
 
 ```text
-설계 4문서 완성(리뷰 29건) + Stage 1~5 + Stage 6 절반 완료(45/58 태스크).
-다음은 FE-6-3(채팅 페이지 실 데이터 wiring) 및 FE-6-5(업로드 smoke test) 2개 후
-문서/프로젝트 페이지 mock → 실 데이터 전환 배치.
+설계 4문서 완성(리뷰 29건) + Stage 1~6 전체 완료(47/58 태스크, 81%).
+다음은 Stage 7(상태 처리 6개) → Stage 8(테스트 5개) — 남은 11개 태스크.
 ```
 
 ## 8. 세션 재개 시 바로 복사 가능한 codex 프롬프트 샘플

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import {
   ProjectCtaRow,
@@ -11,116 +11,100 @@ import {
 } from '@/components/project'
 import { EmptyDocumentsState } from '@/components/documents'
 import { UploadDrawer } from '@/components/upload/UploadDrawer'
+import { projectService } from '@/lib/api/project-service'
 import { ROUTES } from '@/lib/routes'
 import type { ChatSessionSummary } from '@/types/chat'
-import type {
-  DocumentSummary,
-  ProjectDetail,
-  ProjectMetrics,
-  UploadResult,
-} from '@/types/document'
+import type { DocumentSummary, ProjectDetail, ProjectMetrics } from '@/types/document'
 
-function minutesAgo(minutes: number) {
-  return new Date(Date.now() - minutes * 60 * 1000).toISOString()
+type ProjectPageSummary = {
+  detail: ProjectDetail
+  metrics: ProjectMetrics
+  recentDocuments: DocumentSummary[]
+  recentSessions: ChatSessionSummary[]
 }
 
 export default function ProjectPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const router = useRouter()
+  const [summary, setSummary] = useState<ProjectPageSummary>()
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string>()
   const [isUploadOpen, setIsUploadOpen] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
-  const mockProjectDetail: ProjectDetail = {
-    id: projectId,
-    name: 'Acme Wiki',
-    description: 'Internal product docs',
-    ownerName: 'Jane Doe',
-    teamName: 'Product',
-    status: 'active',
-    createdAt: '2026-04-01T09:00:00.000Z',
-    updatedAt: '2026-04-13T10:15:00.000Z',
-  }
+  useEffect(() => {
+    let ignore = false
 
-  const mockMetrics: ProjectMetrics = {
-    documentCount: 24,
-    lastUploadAt: minutesAgo(42),
-    runningJobCount: 2,
-    memberCount: 8,
-  }
+    async function loadSummary() {
+      setIsLoading(true)
+      setError(undefined)
+      const res = await projectService.getProjectSummary(projectId)
+      if (ignore) return
+      if (res.data) setSummary(res.data)
+      if (res.error) setError(res.error)
+      if (!res.data) setSummary(undefined)
+      setIsLoading(false)
+    }
 
-  const mockRecentDocs: DocumentSummary[] = useMemo(() => ([
-    { id: 'doc-001', title: 'Product overview', originalFilename: 'product-overview.pdf', mimeType: 'application/pdf', fileSize: 824123, status: 'READY', uploadedBy: 'Jane Doe', uploadedAt: minutesAgo(42), tags: ['product', 'overview'], summary: 'Core product narrative and positioning.' },
-    { id: 'doc-002', title: 'Roadmap Q2', originalFilename: 'roadmap-q2.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', fileSize: 512004, status: 'INDEXING', progressPct: 74, jobStatus: 'RUNNING', uploadedBy: 'Alex Kim', uploadedAt: minutesAgo(95), tags: ['roadmap'], summary: 'Quarterly priorities and sequencing.' },
-    { id: 'doc-003', title: 'Support runbook', originalFilename: 'support-runbook.md', mimeType: 'text/markdown', fileSize: 24122, status: 'FAILED', jobStatus: 'FAILED', uploadedBy: 'Mina Park', uploadedAt: minutesAgo(180), tags: ['support', 'ops'], summary: 'Incident handling guide for frontline issues.' },
-    { id: 'doc-004', title: 'Launch checklist', originalFilename: 'launch-checklist.txt', mimeType: 'text/plain', fileSize: 18822, status: 'PARSING', progressPct: 31, jobStatus: 'RUNNING', uploadedBy: 'Chris Lee', uploadedAt: minutesAgo(360), tags: ['launch'], summary: 'Cross-functional launch gates and owners.' },
-    { id: 'doc-005', title: 'Pricing FAQ', originalFilename: 'pricing-faq.pdf', mimeType: 'application/pdf', fileSize: 392110, status: 'QUEUED', jobStatus: 'PENDING', uploadedBy: 'Dana Choi', uploadedAt: minutesAgo(960), tags: ['pricing', 'sales'], summary: 'Answers for common pricing objections.' },
-  ]), [])
+    void loadSummary()
 
-  const mockRecentSessions: ChatSessionSummary[] = useMemo(() => ([
-    { id: 'chat-001', title: 'What changed in the pricing FAQ?', scope: { kind: 'PROJECT', projectId }, lastMessageAt: minutesAgo(18), createdBy: 'Jane Doe' },
-    { id: 'chat-002', title: 'Summarize launch blockers from recent docs', scope: { kind: 'PROJECT', projectId }, lastMessageAt: minutesAgo(140), createdBy: 'Alex Kim' },
-    { id: 'chat-003', title: 'Find onboarding references for support', scope: { kind: 'PROJECT', projectId }, lastMessageAt: minutesAgo(420), createdBy: 'Mina Park' },
-  ]), [projectId])
-
-  const canUpload = true
+    return () => {
+      ignore = true
+    }
+  }, [projectId, reloadKey])
 
   const onAsk = () => router.push(`/chat?scope=project&projectId=${projectId}`)
   const onOpenDocuments = () => router.push(ROUTES.projectDocuments(projectId))
   const onOpenUpload = () => setIsUploadOpen(true)
-  const onSelectDocument = (doc: DocumentSummary) => {
-    router.push(`${ROUTES.projectDocuments(projectId)}?documentId=${doc.id}`)
-  }
+  const onSelectDocument = (doc: DocumentSummary) => router.push(`${ROUTES.projectDocuments(projectId)}?documentId=${doc.id}`)
   const onSelectSession = (id: string) => router.push(ROUTES.chatSession(id))
   const onStartNew = () => onAsk()
-  const onUploadClose = () => setIsUploadOpen(false)
-  const onUploaded = (_result: UploadResult) => setIsUploadOpen(false)
+  const onUploaded = () => {
+    setIsUploadOpen(false)
+    setReloadKey((prev) => prev + 1)
+  }
+
+  if (isLoading && !summary) {
+    return (
+      <div className="page-shell space-y-6">
+        <div className="h-28 animate-pulse rounded-3xl bg-surface-hover" />
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-28 animate-pulse rounded-3xl bg-surface-hover" />)}</div>
+        <div className="h-24 animate-pulse rounded-3xl bg-surface-hover" />
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="h-80 animate-pulse rounded-3xl bg-surface-hover" />
+          <div className="h-80 animate-pulse rounded-3xl bg-surface-hover" />
+        </div>
+      </div>
+    )
+  }
+
+  if (error && !summary) {
+    return (
+      <div className="page-shell flex min-h-[60vh] items-center justify-center">
+        <div className="w-full max-w-lg rounded-3xl border border-border bg-white p-8 text-center shadow-panel">
+          <h1 className="text-xl font-semibold text-text-primary">\uD504\uB85C\uC81D\uD2B8\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4</h1>
+          <p className="mt-3 text-sm text-text-secondary">{error}</p>
+          <button type="button" onClick={() => setReloadKey((prev) => prev + 1)} className="mt-6 rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white">Retry</button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!summary) return null
 
   return (
     <div className="page-shell space-y-6">
-      <ProjectDetailHeader
-        project={mockProjectDetail}
-        canEdit
-        onEdit={() => console.log('Edit project', projectId)}
-      />
-
-      <ProjectMetricCards metrics={mockMetrics} isLoading={false} />
-
-      <ProjectCtaRow
-        projectId={projectId}
-        canUpload={canUpload}
-        onAsk={onAsk}
-        onOpenDocuments={onOpenDocuments}
-        onOpenUpload={onOpenUpload}
-      />
+      <ProjectDetailHeader project={summary.detail} canEdit onEdit={() => console.log('Edit project', projectId)} />
+      <ProjectMetricCards metrics={summary.metrics} isLoading={false} />
+      <ProjectCtaRow projectId={projectId} canUpload onAsk={onAsk} onOpenDocuments={onOpenDocuments} onOpenUpload={onOpenUpload} />
 
       <div className="grid gap-6 md:grid-cols-2">
-        <RecentProjectUploads
-          documents={mockRecentDocs}
-          isLoading={false}
-          onSelect={onSelectDocument}
-          onOpenAll={onOpenDocuments}
-        />
-        <RecentProjectChatSessions
-          sessions={mockRecentSessions}
-          isLoading={false}
-          onSelect={onSelectSession}
-          onStartNew={onStartNew}
-        />
+        <RecentProjectUploads documents={summary.recentDocuments} isLoading={false} onSelect={onSelectDocument} onOpenAll={onOpenDocuments} />
+        <RecentProjectChatSessions sessions={summary.recentSessions} isLoading={false} onSelect={onSelectSession} onStartNew={onStartNew} />
       </div>
 
-      {mockRecentDocs.length === 0 ? (
-        <EmptyDocumentsState
-          canUpload
-          onOpenUpload={onOpenUpload}
-          onFilesDropped={(files) => console.log('Dropped files', files)}
-        />
-      ) : null}
-
-      <UploadDrawer
-        isOpen={isUploadOpen}
-        projectId={projectId}
-        onClose={onUploadClose}
-        onUploaded={onUploaded}
-      />
+      {summary.recentDocuments.length === 0 ? <EmptyDocumentsState canUpload onOpenUpload={onOpenUpload} onFilesDropped={() => setIsUploadOpen(true)} /> : null}
+      <UploadDrawer isOpen={isUploadOpen} projectId={projectId} onClose={() => setIsUploadOpen(false)} onUploaded={onUploaded} />
     </div>
   )
 }

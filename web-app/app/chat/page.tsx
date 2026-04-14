@@ -1,12 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-  ChatLayout,
-  ChatSessionList,
-  ChatWelcomeState,
-} from '@/components/chat'
+import { ChatLayout, ChatSessionList, ChatWelcomeState } from '@/components/chat'
+import { chatService } from '@/lib/api/chat-service'
 import { ROUTES } from '@/lib/routes'
 import type {
   ChatAnswerRequest,
@@ -15,30 +12,6 @@ import type {
   SuggestedQuestion,
   TeamOption,
 } from '@/types/chat'
-
-const mockSessions: ChatSessionSummary[] = [
-  {
-    id: 'session-workspace',
-    title: '주간 운영 현황 정리',
-    scope: { kind: 'WORKSPACE' },
-    lastMessageAt: '2025-02-18T09:15:00.000Z',
-    createdBy: 'mina.park',
-  },
-  {
-    id: 'session-project',
-    title: 'Acme Wiki 배포 체크',
-    scope: { kind: 'PROJECT', projectId: 'proj-1' },
-    lastMessageAt: '2025-02-17T15:40:00.000Z',
-    createdBy: 'daniel.choi',
-  },
-  {
-    id: 'session-team',
-    title: '플랫폼 팀 인수인계 요약',
-    scope: { kind: 'TEAM', teamId: 'team-platform' },
-    lastMessageAt: '2025-02-16T22:05:00.000Z',
-    createdBy: 'jiwon.kim',
-  },
-]
 
 const mockProjects: ProjectOption[] = [
   { id: 'proj-1', name: 'Acme Wiki' },
@@ -50,31 +23,82 @@ const mockTeams: TeamOption[] = [
 ]
 
 const mockSuggestions: SuggestedQuestion[] = [
-  { id: 'suggestion-1', text: '이 프로젝트의 배포 절차를 요약해줘' },
-  { id: 'suggestion-2', text: '최근 7일간 변경된 문서를 기준으로 위험 요소를 알려줘' },
-  { id: 'suggestion-3', text: '온보딩에 필요한 핵심 문서를 우선순위로 정리해줘' },
+  { id: 'suggestion-1', text: '이번 주 프로젝트 변경 사항을 요약해줘' },
+  { id: 'suggestion-2', text: '최근 7일간 업데이트된 문서 중 중요한 내용만 정리해줘' },
+  { id: 'suggestion-3', text: '배포 전에 꼭 확인해야 할 체크리스트를 알려줘' },
   { id: 'suggestion-4', text: '플랫폼 팀이 자주 참고하는 운영 가이드를 찾아줘' },
 ]
 
 export default function ChatPage() {
   const router = useRouter()
+  const [sessions, setSessions] = useState<ChatSessionSummary[]>([])
+  const [isLoadingSessions, setIsLoadingSessions] = useState(true)
+  const [sessionsError, setSessionsError] = useState<string>()
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    let isActive = true
+
+    async function loadSessions() {
+      setIsLoadingSessions(true)
+      setSessionsError(undefined)
+
+      const res = await chatService.getSessions({ limit: 10 })
+      if (!isActive) return
+
+      if (res.error) {
+        setSessions([])
+        setSessionsError(res.error)
+      } else {
+        setSessions(res.data ?? [])
+      }
+
+      setIsLoadingSessions(false)
+    }
+
+    void loadSessions()
+
+    return () => {
+      isActive = false
+    }
+  }, [])
 
   const handleSelectSession = (id: string) => {
     router.push(ROUTES.chatSession(id))
   }
 
-  const handleCreateSession = () => {
-    console.log('Chat session creation is not wired yet')
-  }
+  const handleCreateSession = () => {}
 
-  const handleSubmit = (input: ChatAnswerRequest) => {
+  const handleSubmit = async (input: ChatAnswerRequest) => {
     setIsSubmitting(true)
-    window.setTimeout(() => {
+
+    try {
+      const title = input.content.slice(0, 60)
+      const sessionRes = await chatService.createSession({
+        scope: input.scope,
+        title,
+      })
+
+      if (!sessionRes.data) {
+        alert(sessionRes.error ?? '채팅 세션을 생성하지 못했습니다.')
+        return
+      }
+
+      const messageRes = await chatService.postMessage(sessionRes.data.id, {
+        content: input.content,
+      })
+
+      if (!messageRes.data) {
+        alert(messageRes.error ?? '첫 메시지를 전송하지 못했습니다.')
+        return
+      }
+
+      router.push(ROUTES.chatSession(sessionRes.data.id))
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '요청 처리 중 오류가 발생했습니다.')
+    } finally {
       setIsSubmitting(false)
-      router.push(ROUTES.chatSession(`new-${Date.now()}`))
-    }, 300)
-    console.log('Submitting mock chat request', input)
+    }
   }
 
   return (
@@ -83,9 +107,10 @@ export default function ChatPage() {
         scope={{ kind: 'WORKSPACE' }}
         leftSlot={(
           <ChatSessionList
-            sessions={mockSessions}
+            sessions={sessions}
             activeSessionId={undefined}
-            isLoading={false}
+            isLoading={isLoadingSessions}
+            error={sessionsError ? new Error(sessionsError) : undefined}
             onCreateSession={handleCreateSession}
             onSelect={handleSelectSession}
           />
