@@ -93,8 +93,9 @@
 | 5 | FE-5-1 ~ FE-5-10 (10개) | ✅ | Upload 드로어 shell + 6개 스텝 컴포넌트 + `document-service.ts`(XHR) + `job-service.ts`(pollJob) + 실제 wiring |
 | 6 | FE-6-1 ~ FE-6-6 (6개) | ✅ | BFF multipart streaming fix + 3개 서비스(chat/document/project) + 2개 채팅 페이지 실 데이터 wiring + 2개 프로젝트 페이지 실 데이터 wiring |
 | 7 | FE-7-1 ~ FE-7-6 (6개) | ✅ | ErrorView + 4개 error.tsx 경계 + Skeleton + 권한 주입 + 근거 부족 CTA + 폴링 끊김 배너 |
+| 8 | FE-8-1 ~ FE-8-5 (5개) | ✅ | 4개 Playwright e2e(chat entry / document upload / chat answer / citation deeplink) + 1개 Jest 단위 테스트(ChatConversation discriminated union) |
 
-**총 53개 태스크 완료** (Stage 8의 5개 남음)
+**총 58개 태스크 완료 (100%)** — 모든 Stage 완료
 
 Stage 7 세부 완료 내역:
 - **Batch 7A**: FE-7-1 `ErrorView` (6개 statusCode, Korean defaults) + FE-7-2 4개 `error.tsx` 경계
@@ -312,8 +313,9 @@ Stage 8 이전에 `npm install`이 반드시 선행되어야 함(jest + playwrig
 ## 7. 한 줄 요약
 
 ```text
-설계 4문서 완성(리뷰 29건) + Stage 1~7 전체 완료(53/58 태스크, 91%).
-다음은 Stage 8 (e2e 테스트 4개 + 단위 테스트 1개, 5개 태스크) — npm install 필수.
+설계 4문서 완성(리뷰 29건) + Stage 1~8 전체 완료(58/58 태스크, 100%).
+knowledge-base chat feature MVP 구현 완료.
+다음 세션: cd web-app && npm install 후 e2e + unit test 실행 → 실 백엔드와 smoke test.
 ```
 
 ## 8. 세션 재개 시 바로 복사 가능한 codex 프롬프트 샘플
