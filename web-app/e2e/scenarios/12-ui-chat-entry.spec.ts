@@ -22,7 +22,7 @@ test.describe('UI - Chat Entry', () => {
     await expect(page.getByPlaceholder('Ask Graphify a question...')).toBeVisible()
 
     for (const scope of ['Workspace', 'Team', 'Project']) {
-      await expect(page.getByRole('button', { name: scope })).toBeVisible()
+      await expect(page.getByRole('button', { name: scope, exact: true })).toBeVisible()
     }
   })
 })

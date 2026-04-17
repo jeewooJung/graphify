@@ -25,7 +25,7 @@ test.describe('UI - Document Upload', () => {
 
     const firstProjectCard = page.locator('.app-card').first()
     await expect(firstProjectCard).toBeVisible()
-    await firstProjectCard.locator('button').first().click()
+    await page.getByRole('button', { name: 'View project' }).first().click()
     await page.waitForURL(/\/projects\/[^/]+$/, { timeout: 10000 })
 
     await page.getByRole('link', { name: 'Documents' }).click()

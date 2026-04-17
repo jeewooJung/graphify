@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Button, Input } from '@/components/ui'
 import type { DocumentMetadataInput, FileCandidate } from '@/types/document'
 import { TagPillInput } from './TagPillInput'
@@ -23,17 +23,17 @@ export function UploadMetadataForm({
   onChange,
   onBulkApply,
 }: UploadMetadataFormProps) {
-  const [activeFileId, setActiveFileId] = useState<string | undefined>(files[0]?.id)
+  const [selectedFileId, setSelectedFileId] = useState<string | undefined>(files[0]?.id)
   const [activeTagInput, setActiveTagInput] = useState('')
   const [bulkTitle, setBulkTitle] = useState('')
   const [bulkDocType, setBulkDocType] = useState('')
   const [bulkTagInput, setBulkTagInput] = useState('')
   const [bulkTags, setBulkTags] = useState<string[]>([])
-
-  useEffect(() => {
-    if (files.length === 0) return setActiveFileId(undefined)
-    if (!activeFileId || !files.some((file) => file.id === activeFileId)) setActiveFileId(files[0].id)
-  }, [activeFileId, files])
+  const activeFileId = files.length === 0
+    ? undefined
+    : files.some((file) => file.id === selectedFileId)
+      ? selectedFileId
+      : files[0].id
 
   if (files.length === 0 || !activeFileId) {
     return <p className="text-sm text-slate-500">메타데이터를 입력할 파일이 없습니다.</p>
@@ -60,7 +60,7 @@ export function UploadMetadataForm({
               'rounded-full px-3 py-1.5 text-sm transition-colors',
               file.id === activeFileId ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600',
             ].join(' ')}
-            onClick={() => setActiveFileId(file.id)}
+            onClick={() => setSelectedFileId(file.id)}
           >
             {file.file.name}
           </button>

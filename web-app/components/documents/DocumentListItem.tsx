@@ -44,10 +44,10 @@ function formatRelativeTime(value: string) {
   return 'just now'
 }
 
-function getFileIcon(mimeType: string) {
-  if (mimeType.includes('markdown')) return FileCode2
-  if (mimeType.includes('pdf') || mimeType.includes('text') || mimeType.includes('word')) return FileText
-  return File
+function renderFileIcon(mimeType: string) {
+  if (mimeType.includes('markdown')) return <FileCode2 size={18} />
+  if (mimeType.includes('pdf') || mimeType.includes('text') || mimeType.includes('word')) return <FileText size={18} />
+  return <File size={18} />
 }
 
 export function DocumentListItem({
@@ -60,7 +60,6 @@ export function DocumentListItem({
 }: DocumentListItemProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
-  const FileIcon = getFileIcon(item.mimeType)
 
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
@@ -89,7 +88,7 @@ export function DocumentListItem({
       )}
     >
       <span className={clsx('absolute inset-y-3 left-0 w-1 rounded-r-full', isSelected && 'bg-primary-500')} />
-      <div className="mt-0.5 rounded-2xl border border-border bg-white p-2 text-text-tertiary"><FileIcon size={18} /></div>
+      <div className="mt-0.5 rounded-2xl border border-border bg-white p-2 text-text-tertiary">{renderFileIcon(item.mimeType)}</div>
       <div className="min-w-0 flex-1 space-y-3">
         <div className="space-y-1">
           <p className="truncate text-sm font-semibold text-text-primary">{item.title}</p>

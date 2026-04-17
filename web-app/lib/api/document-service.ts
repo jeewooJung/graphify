@@ -9,10 +9,17 @@ import {
 } from '@/lib/api/document-service.helpers'
 import type {
   DocumentChunk,
+  DocumentDetail,
   DocumentFilterState,
   DocumentMetadataInput,
   DocumentSummary,
 } from '@/types/document'
+
+type ServiceResult<T> = {
+  data?: T
+  error?: string
+  status: number
+}
 
 type UploadDocumentResult = {
   data?: {
@@ -54,7 +61,7 @@ export const documentService = {
     projectId: string,
     filter: Partial<DocumentFilterState> = {},
     options: { limit?: number; offset?: number; sort?: 'recent' | 'title' } = {}
-  ) {
+  ): Promise<ServiceResult<DocumentSummary[]>> {
     const query = buildDocumentQuery(filter, options)
     const response = await api.get<unknown>(
       `/projects/${encodeURIComponent(projectId)}/documents${query ? `?${query}` : ''}`
@@ -70,10 +77,10 @@ export const documentService = {
     }
   },
 
-  async getDocument(documentId: string) {
+  async getDocument(documentId: string): Promise<ServiceResult<DocumentDetail>> {
     const response = await api.get<unknown>(`/documents/${encodeURIComponent(documentId)}`)
     if (response.error || !response.data) {
-      return response
+      return response as ServiceResult<DocumentDetail>
     }
 
     return {
@@ -82,7 +89,10 @@ export const documentService = {
     }
   },
 
-  async getDocumentChunks(documentId: string, options: { limit?: number } = {}) {
+  async getDocumentChunks(
+    documentId: string,
+    options: { limit?: number } = {}
+  ): Promise<ServiceResult<DocumentChunk[]>> {
     const params = new URLSearchParams()
     if (typeof options.limit === 'number') {
       params.set('limit', String(options.limit))
@@ -103,9 +113,9 @@ export const documentService = {
     }
   },
 
-  async deleteDocument(documentId: string) {
+  async deleteDocument(documentId: string): Promise<ServiceResult<true>> {
     const response = await api.delete<unknown>(`/documents/${encodeURIComponent(documentId)}`)
-    return response.error ? response : { ...response, data: true as const }
+    return response.error ? (response as ServiceResult<true>) : { ...response, data: true as const }
   },
 
   async uploadDocument(

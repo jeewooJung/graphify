@@ -16,15 +16,22 @@ type ChatLayoutProps = {
 }
 
 function useDesktop() {
-  const getMatches = () => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
-  const [isDesktop, setIsDesktop] = useState(getMatches)
+  const [isDesktop, setIsDesktop] = useState(false)
 
   useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined
+    }
+
     const mediaQuery = window.matchMedia('(min-width: 768px)')
-    const handleChange = (event: MediaQueryListEvent) => setIsDesktop(event.matches)
-    setIsDesktop(mediaQuery.matches)
-    mediaQuery.addEventListener('change', handleChange)
-    return () => mediaQuery.removeEventListener('change', handleChange)
+    const apply = () => {
+      const nextIsDesktop = mediaQuery.matches
+      setIsDesktop((currentIsDesktop) => (currentIsDesktop === nextIsDesktop ? currentIsDesktop : nextIsDesktop))
+    }
+
+    apply()
+    mediaQuery.addEventListener('change', apply)
+    return () => mediaQuery.removeEventListener('change', apply)
   }, [])
 
   return isDesktop
@@ -82,11 +89,21 @@ export function ChatLayout({
   useEffect(() => onSessionListOpenChange?.(isSessionListOpen), [isSessionListOpen, onSessionListOpenChange])
   useEffect(() => onSourcePanelOpenChange?.(isSourcePanelOpen), [isSourcePanelOpen, onSourcePanelOpenChange])
   useEffect(() => {
-    if (isDesktop) {
-      setIsSessionListOpen(false)
-      setIsSourcePanelOpen(false)
+    if (typeof window === 'undefined') {
+      return undefined
     }
-  }, [isDesktop])
+
+    const mediaQuery = window.matchMedia('(min-width: 768px)')
+    const handleChange = (event: MediaQueryListEvent) => {
+      if (event.matches) {
+        setIsSessionListOpen(false)
+        setIsSourcePanelOpen(false)
+      }
+    }
+
+    mediaQuery.addEventListener('change', handleChange)
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [])
 
   if (isDesktop) {
     return (

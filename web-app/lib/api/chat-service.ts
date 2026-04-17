@@ -17,6 +17,12 @@ import {
   toString,
 } from '@/lib/api/service-utils'
 
+type ServiceResult<T> = {
+  data?: T
+  error?: string
+  status: number
+}
+
 function mapScope(value: unknown): ChatScope {
   const raw = asRecord(value)
   const kind = toString(raw.kind ?? raw.scopeType ?? raw.scope_type, 'WORKSPACE').toUpperCase()
@@ -154,7 +160,9 @@ function mapUserMessage(rawValue: unknown): UserMessage {
 }
 
 export const chatService = {
-  async getSessions(options: { scope?: ChatScope; limit?: number } = {}) {
+  async getSessions(
+    options: { scope?: ChatScope; limit?: number } = {}
+  ): Promise<ServiceResult<ChatSessionSummary[]>> {
     const params = new URLSearchParams()
     const scopeParams = scopeToParams(options.scope)
     if (scopeParams.scopeType) params.set('scopeType', scopeParams.scopeType)
@@ -173,16 +181,18 @@ export const chatService = {
     }
   },
 
-  async getSession(sessionId: string) {
+  async getSession(sessionId: string): Promise<ServiceResult<ChatSession>> {
     const response = await api.get<unknown>(`/chat/sessions/${encodeURIComponent(sessionId)}`)
     if (response.error || !response.data) {
-      return response
+      return response as ServiceResult<ChatSession>
     }
 
     return { ...response, data: mapSession(asRecord(response.data).session ?? response.data) }
   },
 
-  async createSession(payload: { scope: ChatScope; title?: string }) {
+  async createSession(
+    payload: { scope: ChatScope; title?: string }
+  ): Promise<ServiceResult<ChatSession>> {
     const scope = scopeToParams(payload.scope)
     const response = await api.post<unknown>('/chat/sessions', {
       scopeType: scope.scopeType,
@@ -191,13 +201,16 @@ export const chatService = {
     })
 
     if (response.error || !response.data) {
-      return response
+      return response as ServiceResult<ChatSession>
     }
 
     return { ...response, data: mapSession(asRecord(response.data).session ?? response.data) }
   },
 
-  async getMessages(sessionId: string, options: { before?: string; limit?: number } = {}) {
+  async getMessages(
+    sessionId: string,
+    options: { before?: string; limit?: number } = {}
+  ): Promise<ServiceResult<ConversationMessage[]>> {
     const params = new URLSearchParams()
     if (options.before) params.set('before', options.before)
     if (typeof options.limit === 'number') params.set('limit', String(options.limit))
@@ -214,14 +227,17 @@ export const chatService = {
     }
   },
 
-  async postMessage(sessionId: string, payload: { content: string }) {
+  async postMessage(
+    sessionId: string,
+    payload: { content: string }
+  ): Promise<ServiceResult<{ user: UserMessage; answer: AssistantAnswer }>> {
     const response = await api.post<unknown>(
       `/chat/sessions/${encodeURIComponent(sessionId)}/messages`,
       payload
     )
 
     if (response.error || !response.data) {
-      return response
+      return response as ServiceResult<{ user: UserMessage; answer: AssistantAnswer }>
     }
 
     const raw = asRecord(response.data)
@@ -238,7 +254,7 @@ export const chatService = {
     }
   },
 
-  async answer(payload: ChatAnswerRequest) {
+  async answer(payload: ChatAnswerRequest): Promise<ServiceResult<AssistantAnswer>> {
     const scope = scopeToParams(payload.scope)
     const response = await api.post<unknown>('/chat/answer', {
       scopeType: scope.scopeType,
@@ -248,7 +264,7 @@ export const chatService = {
     })
 
     if (response.error || !response.data) {
-      return response
+      return response as ServiceResult<AssistantAnswer>
     }
 
     return { ...response, data: mapAssistantAnswer({ ...asRecord(response.data), role: 'assistant' }) }

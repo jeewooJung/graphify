@@ -1,9 +1,11 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button, PageHeader } from '@/components/ui'
 import { ProjectList } from '@/components/project/ProjectList'
 import { projectService } from '@/lib/api/project-service'
+import { ROUTES } from '@/lib/routes'
 import { Plus } from 'lucide-react'
 
 interface Project {
@@ -19,6 +21,7 @@ interface Project {
 }
 
 export default function ProjectsPage() {
+  const router = useRouter()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -71,7 +74,7 @@ export default function ProjectsPage() {
         <ProjectList
           projects={projects}
           loading={loading}
-          onViewProject={(id) => console.log('View project', id)}
+          onViewProject={(id) => router.push(ROUTES.project(id))}
           onEditProject={(id) => console.log('Edit project', id)}
           onDeleteProject={(id) => console.log('Delete project', id)}
         />

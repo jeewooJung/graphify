@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Badge } from '@/components/ui'
 import type { ChatSession } from '@/types/chat'
 
@@ -13,10 +13,6 @@ type ChatSessionHeaderProps = {
 export function ChatSessionHeader({ session, onRename, readOnly = false }: ChatSessionHeaderProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [draftTitle, setDraftTitle] = useState(session.title)
-
-  useEffect(() => {
-    if (!isEditing) setDraftTitle(session.title)
-  }, [isEditing, session.title])
 
   const commit = () => {
     const nextTitle = draftTitle.trim()
@@ -44,7 +40,11 @@ export function ChatSessionHeader({ session, onRename, readOnly = false }: ChatS
         ) : (
           <h1
             className="text-xl font-semibold text-text-primary"
-            onDoubleClick={() => !readOnly && setIsEditing(true)}
+            onDoubleClick={() => {
+              if (readOnly) return
+              setDraftTitle(session.title)
+              setIsEditing(true)
+            }}
           >
             {session.title}
           </h1>

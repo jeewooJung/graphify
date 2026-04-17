@@ -96,12 +96,13 @@ export default function ChatSessionPage() {
 
     try {
       const res = await chatService.postMessage(sessionId, { content })
+      const messagePair = res.data
 
-      if (res.data) {
+      if (messagePair) {
         setMessages((prev) => [
           ...prev.filter((message) => message.id !== optimisticUser.id),
-          res.data.user,
-          res.data.answer,
+          messagePair.user,
+          messagePair.answer,
         ])
         return
       }

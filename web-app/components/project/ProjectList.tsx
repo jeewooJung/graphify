@@ -85,6 +85,7 @@ export function ProjectList({
             <div className="flex items-center gap-2">
               <button
                 type="button"
+                aria-label="View project"
                 onClick={() => onViewProject?.(project.id)}
                 className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white/82 text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-primary"
               >
@@ -92,6 +93,7 @@ export function ProjectList({
               </button>
               <button
                 type="button"
+                aria-label="Edit project"
                 onClick={() => onEditProject?.(project.id)}
                 className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white/82 text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-primary"
               >
@@ -99,6 +101,7 @@ export function ProjectList({
               </button>
               <button
                 type="button"
+                aria-label="Delete project"
                 onClick={() => onDeleteProject?.(project.id)}
                 className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white/82 text-error-500 transition-colors hover:bg-error-50"
               >

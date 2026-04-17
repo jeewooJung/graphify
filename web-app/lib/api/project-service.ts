@@ -16,6 +16,19 @@ import type {
   ProjectMetrics,
 } from '@/types/document'
 
+type ServiceResult<T> = {
+  data?: T
+  error?: string
+  status: number
+}
+
+type ProjectSummaryData = {
+  detail: ProjectDetail
+  metrics: ProjectMetrics
+  recentDocuments: DocumentSummary[]
+  recentSessions: ChatSessionSummary[]
+}
+
 export interface Project {
   id: string
   name: string
@@ -152,10 +165,10 @@ export const projectService = {
     return api.delete(`/projects/${projectId}`)
   },
 
-  async getProjectDetail(projectId: string) {
+  async getProjectDetail(projectId: string): Promise<ServiceResult<ProjectDetail>> {
     const response = await api.get<unknown>(`/projects/${encodeURIComponent(projectId)}`)
     if (response.error || !response.data) {
-      return response
+      return response as ServiceResult<ProjectDetail>
     }
 
     return {
@@ -164,7 +177,7 @@ export const projectService = {
     }
   },
 
-  async getProjectMetrics(projectId: string) {
+  async getProjectMetrics(projectId: string): Promise<ServiceResult<ProjectMetrics>> {
     const [documentsResult, jobsResponse, detailResponse] = await Promise.all([
       getDocumentsCount(projectId),
       api.get<unknown>(`/projects/${encodeURIComponent(projectId)}/jobs?status=RUNNING,PENDING`),
@@ -192,7 +205,7 @@ export const projectService = {
     }
   },
 
-  async getProjectSummary(projectId: string) {
+  async getProjectSummary(projectId: string): Promise<ServiceResult<ProjectSummaryData>> {
     const [detailResponse, metricsResponse, documentsResponse, sessionsResponse] = await Promise.all([
       this.getProjectDetail(projectId),
       this.getProjectMetrics(projectId),
@@ -223,7 +236,7 @@ export const projectService = {
         metrics: metricsResponse.data,
         recentDocuments: (documentsResponse.data ?? []) as DocumentSummary[],
         recentSessions: (sessionsResponse.data ?? []) as ChatSessionSummary[],
-      },
+      } satisfies ProjectSummaryData,
     }
   },
 }
