@@ -41,15 +41,15 @@ test.describe('UI - Document Upload', () => {
       buffer: Buffer.from('hello'),
     })
 
-    await page.getByRole('button', { name: 'Next' }).click()
+    await page.getByRole('button', { name: 'Next', exact: true }).click()
     await expect(page.locator('[data-step="validate"], [data-step="metadata"]')).toBeVisible()
 
     if (await page.locator('[data-step="validate"]').isVisible()) {
-      await page.getByRole('button', { name: 'Next' }).click()
+      await page.getByRole('button', { name: 'Next', exact: true }).click()
     }
 
     await expect(page.locator('[data-step="metadata"]')).toBeVisible()
-    await page.getByRole('button', { name: 'Submit' }).click()
+    await page.getByRole('button', { name: 'Submit', exact: true }).click()
     await expect(page.locator('[data-step="submitting"], [data-step="result"]')).toBeVisible()
 
     const currentPath = await page.evaluate(() => window.location.pathname)
