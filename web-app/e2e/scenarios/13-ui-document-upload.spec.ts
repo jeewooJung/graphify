@@ -34,22 +34,23 @@ test.describe('UI - Document Upload', () => {
     const documentsPath = await page.evaluate(() => window.location.pathname)
     await page.getByRole('button', { name: /upload documents/i }).click()
     await expect(page.getByText(/Upload to/i)).toBeVisible()
+    const drawer = page.locator('section').filter({ has: page.getByText(/Upload to/i) })
 
-    await page.locator('input[type=file]').setInputFiles({
+    await drawer.locator('input[type=file]').setInputFiles({
       name: 'test.txt',
       mimeType: 'text/plain',
       buffer: Buffer.from('hello'),
     })
 
-    await page.getByRole('button', { name: 'Next', exact: true }).click()
+    await drawer.getByRole('button', { name: 'Next', exact: true }).click()
     await expect(page.locator('[data-step="validate"], [data-step="metadata"]')).toBeVisible()
 
     if (await page.locator('[data-step="validate"]').isVisible()) {
-      await page.getByRole('button', { name: 'Next', exact: true }).click()
+      await drawer.getByRole('button', { name: 'Next', exact: true }).click()
     }
 
     await expect(page.locator('[data-step="metadata"]')).toBeVisible()
-    await page.getByRole('button', { name: 'Submit', exact: true }).click()
+    await drawer.getByRole('button', { name: 'Submit', exact: true }).click()
     await expect(page.locator('[data-step="submitting"], [data-step="result"]')).toBeVisible()
 
     const currentPath = await page.evaluate(() => window.location.pathname)
