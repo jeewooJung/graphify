@@ -1,5 +1,6 @@
 package com.graphify.backend.controller;
 
+import com.graphify.backend.dto.response.ErrorResponse;
 import com.graphify.backend.entity.Document;
 import com.graphify.backend.entity.DocumentChunk;
 import com.graphify.backend.entity.Project;
@@ -9,6 +10,8 @@ import com.graphify.backend.repository.DocumentRepository;
 import com.graphify.backend.repository.ProjectRepository;
 import com.graphify.backend.repository.UserRepository;
 import com.graphify.backend.security.UserPrincipal;
+import com.graphify.backend.service.document.DocumentProcessingService;
+import com.graphify.backend.service.document.DocumentStorageService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -16,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -27,24 +31,31 @@ public class DocumentController {
     private final DocumentChunkRepository documentChunkRepository;
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
+    private final DocumentProcessingService documentProcessingService;
+    private final DocumentStorageService documentStorageService;
 
     public DocumentController(DocumentRepository documentRepository,
                               DocumentChunkRepository documentChunkRepository,
                               ProjectRepository projectRepository,
-                              UserRepository userRepository) {
+                              UserRepository userRepository,
+                              DocumentProcessingService documentProcessingService,
+                              DocumentStorageService documentStorageService) {
         this.documentRepository = documentRepository;
         this.documentChunkRepository = documentChunkRepository;
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
+        this.documentProcessingService = documentProcessingService;
+        this.documentStorageService = documentStorageService;
     }
 
     @PostMapping("/projects/{projectId}/documents")
-    public ResponseEntity<Map<String, Object>> uploadDocument(@PathVariable Long projectId,
-                                                              @RequestParam("file") MultipartFile file,
-                                                              @RequestParam(name = "title", required = false) String title,
-                                                              @RequestParam(name = "docType", required = false) String docType,
-                                                              @RequestParam(name = "tags", required = false) String tags,
-                                                              Authentication authentication) {
+    @Transactional
+    public ResponseEntity<?> uploadDocument(@PathVariable Long projectId,
+                                            @RequestParam("file") MultipartFile file,
+                                            @RequestParam(name = "title", required = false) String title,
+                                            @RequestParam(name = "docType", required = false) String docType,
+                                            @RequestParam(name = "tags", required = false) String tags,
+                                            Authentication authentication) {
         Project project = projectRepository.findById(projectId).orElse(null);
         if (project == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -52,31 +63,22 @@ public class DocumentController {
         }
 
         User currentUser = currentUser(authentication);
-        String originalFilename = resolveOriginalFilename(file);
-        String resolvedTitle = title != null && !title.isBlank()
-            ? title.trim()
-            : stripExtension(originalFilename);
+        try {
+            Document saved = documentProcessingService.processUpload(project, currentUser, file, title);
 
-        Document document = new Document();
-        document.setProject(project);
-        document.setUploadedBy(currentUser);
-        document.setTitle(resolvedTitle);
-        document.setOriginalFilename(originalFilename);
-        document.setMimeType(resolveMimeType(file));
-        document.setFileSize(file.getSize());
-        // TODO: Persist the uploaded file to durable storage in Phase 2.
-        document.setStoragePath("uploads/" + UUID.randomUUID() + "-" + originalFilename);
-        document.setSourceType("UPLOAD");
-        document.setStatus("UPLOADED");
-        document.setSummary("Stub summary for \"" + resolvedTitle + "\". Document analysis will be wired in Phase 2.");
-
-        Document saved = documentRepository.save(document);
-        documentChunkRepository.saveAll(buildStubChunks(saved, docType, tags));
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("documentId", saved.getId());
-        response.put("jobId", saved.getId() * 1000);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+            Map<String, Object> response = new HashMap<>();
+            response.put("documentId", saved.getId());
+            response.put("jobId", saved.getId());
+            response.put("status", saved.getStatus());
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
+        } catch (IOException exception) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorResponse(
+                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                    "Internal Server Error",
+                    "Failed to process document upload"
+                ));
+        }
     }
 
     @GetMapping("/projects/{projectId}/documents")
@@ -143,10 +145,24 @@ public class DocumentController {
     }
 
     @DeleteMapping("/documents/{documentId}")
-    public ResponseEntity<Void> deleteDocument(@PathVariable Long documentId) {
+    @Transactional
+    public ResponseEntity<?> deleteDocument(@PathVariable Long documentId) {
         Document document = documentRepository.findById(documentId).orElse(null);
         if (document == null) {
             return ResponseEntity.notFound().build();
+        }
+
+        try {
+            if (document.getStoragePath() != null && !document.getStoragePath().isBlank()) {
+                documentStorageService.delete(document.getStoragePath());
+            }
+        } catch (IOException exception) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorResponse(
+                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                    "Internal Server Error",
+                    "Failed to delete stored document"
+                ));
         }
 
         documentRepository.delete(document);
@@ -189,52 +205,6 @@ public class DocumentController {
         return value != null && value.toLowerCase(Locale.ROOT).contains(normalizedQuery);
     }
 
-    private String resolveOriginalFilename(MultipartFile file) {
-        String originalFilename = file.getOriginalFilename();
-        if (originalFilename == null || originalFilename.isBlank()) {
-            return "upload.bin";
-        }
-
-        return originalFilename.replace("\\", "_").replace("/", "_");
-    }
-
-    private String resolveMimeType(MultipartFile file) {
-        return file.getContentType() != null && !file.getContentType().isBlank()
-            ? file.getContentType()
-            : "application/octet-stream";
-    }
-
-    private String stripExtension(String filename) {
-        int index = filename.lastIndexOf('.');
-        return index > 0 ? filename.substring(0, index) : filename;
-    }
-
-    private List<DocumentChunk> buildStubChunks(Document document, String docType, String tags) {
-        List<DocumentChunk> chunks = new ArrayList<>();
-        String typeLabel = docType != null && !docType.isBlank() ? docType : "DOCUMENT";
-        String tagLabel = tags != null && !tags.isBlank() ? tags : "[]";
-        String[] contents = new String[] {
-            "Stub chunk 1 for \"" + document.getTitle() + "\". This upload was accepted for project "
-                + document.getProject().getName() + " and recorded as type " + typeLabel + ".",
-            "Stub chunk 2 captures placeholder metadata for development. Original filename: "
-                + document.getOriginalFilename() + ". Tags payload: " + tagLabel + ".",
-            "Stub chunk 3 exists so the frontend can render realistic previews before parsing, indexing, and RAG retrieval are implemented."
-        };
-
-        for (int index = 0; index < contents.length; index++) {
-            DocumentChunk chunk = new DocumentChunk();
-            chunk.setDocument(document);
-            chunk.setChunkIndex(index);
-            chunk.setContent(contents[index]);
-            chunk.setTokenCount(Math.max(8, contents[index].split("\\s+").length));
-            chunk.setPageNumber(index + 1);
-            chunk.setSectionTitle("Stub Section " + (index + 1));
-            chunks.add(chunk);
-        }
-
-        return chunks;
-    }
-
     private Map<String, Object> toSummaryMap(Document document) {
         Map<String, Object> map = new HashMap<>();
         map.put("id", document.getId());
@@ -243,7 +213,7 @@ public class DocumentController {
         map.put("mimeType", document.getMimeType());
         map.put("fileSize", document.getFileSize());
         map.put("status", document.getStatus());
-        map.put("jobStatus", "COMPLETED");
+        map.put("jobStatus", document.getStatus());
         map.put("uploadedBy", userDisplayName(document.getUploadedBy()));
         map.put("uploadedAt", document.getCreatedAt());
         map.put("tags", Collections.emptyList());

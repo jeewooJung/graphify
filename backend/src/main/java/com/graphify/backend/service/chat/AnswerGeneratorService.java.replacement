@@ -1,0 +1,220 @@
+package com.graphify.backend.service.chat;
+
+import com.graphify.backend.entity.AnswerCitation;
+import com.graphify.backend.entity.ChatMessage;
+import com.graphify.backend.entity.ChatSession;
+import com.graphify.backend.entity.Document;
+import com.graphify.backend.entity.DocumentChunk;
+import com.graphify.backend.entity.User;
+import com.graphify.backend.repository.AnswerCitationRepository;
+import com.graphify.backend.repository.ChatMessageRepository;
+import com.graphify.backend.repository.DocumentChunkRepository;
+import com.graphify.backend.repository.DocumentRepository;
+import com.graphify.backend.service.llm.OllamaClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+@Service
+public class AnswerGeneratorService {
+    private static final Logger log = LoggerFactory.getLogger(AnswerGeneratorService.class);
+    private static final List<String> READY_STATUSES = List.of("READY");
+    private static final String LLM_ERROR_MESSAGE = "LLM 서버 호출에 실패했습니다. 잠시 후 다시 시도해주세요.";
+
+    private final OllamaClient ollamaClient;
+    private final ChatPromptBuilder chatPromptBuilder;
+    private final CitationParser citationParser;
+    private final DocumentRepository documentRepository;
+    private final DocumentChunkRepository documentChunkRepository;
+    private final ChatMessageRepository chatMessageRepository;
+    private final AnswerCitationRepository answerCitationRepository;
+    private final String modelName;
+
+    public AnswerGeneratorService(OllamaClient ollamaClient,
+                                  ChatPromptBuilder chatPromptBuilder,
+                                  CitationParser citationParser,
+                                  DocumentRepository documentRepository,
+                                  DocumentChunkRepository documentChunkRepository,
+                                  ChatMessageRepository chatMessageRepository,
+                                  AnswerCitationRepository answerCitationRepository,
+                                  @Value("${graphify.ollama.model}") String modelName) {
+        this.ollamaClient = ollamaClient;
+        this.chatPromptBuilder = chatPromptBuilder;
+        this.citationParser = citationParser;
+        this.documentRepository = documentRepository;
+        this.documentChunkRepository = documentChunkRepository;
+        this.chatMessageRepository = chatMessageRepository;
+        this.answerCitationRepository = answerCitationRepository;
+        this.modelName = modelName;
+    }
+
+    public record GeneratedAnswer(ChatMessage assistantMessage, List<AnswerCitation> citations, List<Document> includedDocuments) {}
+
+    @Transactional
+    public GeneratedAnswer generateForSession(ChatSession session, String userQuestion, List<ChatMessage> history) {
+        List<Document> candidateDocuments = resolveCandidateDocuments(session.getCreatedBy(), session.getScopeType(), session.getScopeId());
+        List<DocumentChunk> allChunks = loadChunks(candidateDocuments);
+        ChatPromptBuilder.BuiltPrompt builtPrompt = chatPromptBuilder.build(userQuestion, candidateDocuments, allChunks, history);
+
+        log.info(
+            "Generating chat answer sessionId={} scopeType={} scopeId={} candidateDocuments={} includedDocuments={}",
+            session.getId(),
+            session.getScopeType(),
+            session.getScopeId(),
+            candidateDocuments.size(),
+            builtPrompt.includedDocuments().size()
+        );
+
+        try {
+            OllamaClient.OllamaChatResponse response = ollamaClient.chat(
+                new OllamaClient.OllamaChatRequest(builtPrompt.systemPrompt(), builtPrompt.userPrompt())
+            );
+            CitationParser.ParsedAnswer parsedAnswer = citationParser.parse(response.content(), builtPrompt.includedDocuments());
+
+            ChatMessage assistantMessage = chatMessageRepository.save(buildAssistantMessage(session, parsedAnswer.content()));
+            List<AnswerCitation> citations = buildCitations(assistantMessage, parsedAnswer.citedDocumentIds(), builtPrompt.includedDocuments());
+            if (!citations.isEmpty()) {
+                citations = answerCitationRepository.saveAll(citations);
+            }
+
+            return new GeneratedAnswer(assistantMessage, citations, builtPrompt.includedDocuments());
+        } catch (IOException | InterruptedException | IllegalStateException exception) {
+            if (exception instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            log.warn(
+                "Failed to generate chat answer sessionId={} scopeType={} scopeId={}",
+                session.getId(),
+                session.getScopeType(),
+                session.getScopeId(),
+                exception
+            );
+
+            ChatMessage assistantMessage = chatMessageRepository.save(buildAssistantMessage(session, LLM_ERROR_MESSAGE));
+            return new GeneratedAnswer(assistantMessage, List.of(), builtPrompt.includedDocuments());
+        }
+    }
+
+    public GeneratedAnswer generateSingleShot(User user, String scopeType, Long scopeId, String userQuestion) {
+        List<Document> candidateDocuments = resolveCandidateDocuments(user, scopeType, scopeId);
+        List<DocumentChunk> allChunks = loadChunks(candidateDocuments);
+        ChatPromptBuilder.BuiltPrompt builtPrompt = chatPromptBuilder.build(userQuestion, candidateDocuments, allChunks, List.of());
+
+        log.info(
+            "Generating single-shot answer scopeType={} scopeId={} candidateDocuments={} includedDocuments={}",
+            scopeType,
+            scopeId,
+            candidateDocuments.size(),
+            builtPrompt.includedDocuments().size()
+        );
+
+        try {
+            OllamaClient.OllamaChatResponse response = ollamaClient.chat(
+                new OllamaClient.OllamaChatRequest(builtPrompt.systemPrompt(), builtPrompt.userPrompt())
+            );
+            CitationParser.ParsedAnswer parsedAnswer = citationParser.parse(response.content(), builtPrompt.includedDocuments());
+
+            ChatMessage assistantMessage = buildAssistantMessage(null, parsedAnswer.content());
+            assistantMessage.setCreatedAt(LocalDateTime.now());
+            List<AnswerCitation> citations = buildCitations(assistantMessage, parsedAnswer.citedDocumentIds(), builtPrompt.includedDocuments());
+            return new GeneratedAnswer(assistantMessage, citations, builtPrompt.includedDocuments());
+        } catch (IOException | InterruptedException | IllegalStateException exception) {
+            if (exception instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            log.warn("Failed to generate single-shot answer scopeType={} scopeId={}", scopeType, scopeId, exception);
+
+            ChatMessage assistantMessage = buildAssistantMessage(null, LLM_ERROR_MESSAGE);
+            assistantMessage.setCreatedAt(LocalDateTime.now());
+            return new GeneratedAnswer(assistantMessage, List.of(), builtPrompt.includedDocuments());
+        }
+    }
+
+    private List<Document> resolveCandidateDocuments(User user, String scopeType, Long scopeId) {
+        String normalizedScopeType = scopeType == null || scopeType.isBlank()
+            ? "WORKSPACE"
+            : scopeType.trim().toUpperCase(Locale.ROOT);
+
+        return switch (normalizedScopeType) {
+            case "PROJECT" -> scopeId == null
+                ? List.of()
+                : documentRepository.findByProjectIdAndStatusIn(scopeId, READY_STATUSES);
+            case "TEAM" -> {
+                // TODO: Restrict TEAM scope documents to the current user's team visibility.
+                yield documentRepository.findAll().stream()
+                    .filter(document -> "READY".equals(document.getStatus()))
+                    .toList();
+            }
+            case "WORKSPACE" -> {
+                // TODO: Restrict WORKSPACE scope documents to the current user's workspace visibility.
+                yield documentRepository.findAll().stream()
+                    .filter(document -> "READY".equals(document.getStatus()))
+                    .toList();
+            }
+            default -> List.of();
+        };
+    }
+
+    private List<DocumentChunk> loadChunks(List<Document> documents) {
+        List<Long> documentIds = documents.stream()
+            .map(Document::getId)
+            .filter(id -> id != null)
+            .toList();
+        if (documentIds.isEmpty()) {
+            return List.of();
+        }
+        return documentChunkRepository.findByDocumentIdInOrderByDocumentIdAscChunkIndexAsc(documentIds);
+    }
+
+    private ChatMessage buildAssistantMessage(ChatSession session, String content) {
+        ChatMessage assistantMessage = new ChatMessage();
+        assistantMessage.setSession(session);
+        assistantMessage.setRole("ASSISTANT");
+        assistantMessage.setContent(content);
+        assistantMessage.setModelName(modelName);
+        assistantMessage.setConfidence(null);
+        return assistantMessage;
+    }
+
+    private List<AnswerCitation> buildCitations(ChatMessage message,
+                                                List<Long> citedDocumentIds,
+                                                List<Document> includedDocuments) {
+        if (citedDocumentIds.isEmpty() || includedDocuments.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, Document> documentById = new LinkedHashMap<>();
+        for (Document document : includedDocuments) {
+            if (document != null && document.getId() != null) {
+                documentById.put(document.getId(), document);
+            }
+        }
+
+        List<AnswerCitation> citations = new ArrayList<>();
+        for (Long citedDocumentId : citedDocumentIds) {
+            Document document = documentById.get(citedDocumentId);
+            if (document == null) {
+                continue;
+            }
+
+            AnswerCitation citation = new AnswerCitation();
+            citation.setMessage(message);
+            citation.setDocument(document);
+            citation.setChunk(null);
+            citation.setQuoteText(null);
+            citation.setRelevanceScore(1.0);
+            citations.add(citation);
+        }
+        return citations;
+    }
+}

@@ -1,23 +1,42 @@
 package com.graphify.backend.controller;
 
+import com.graphify.backend.entity.AnswerCitation;
 import com.graphify.backend.entity.ChatMessage;
 import com.graphify.backend.entity.ChatSession;
+import com.graphify.backend.entity.Document;
+import com.graphify.backend.entity.DocumentChunk;
+import com.graphify.backend.entity.Project;
 import com.graphify.backend.entity.User;
+import com.graphify.backend.repository.AnswerCitationRepository;
 import com.graphify.backend.repository.ChatMessageRepository;
 import com.graphify.backend.repository.ChatSessionRepository;
 import com.graphify.backend.repository.UserRepository;
 import com.graphify.backend.security.UserPrincipal;
+import com.graphify.backend.service.chat.AnswerGeneratorService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -27,13 +46,19 @@ public class ChatController {
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final UserRepository userRepository;
+    private final AnswerCitationRepository answerCitationRepository;
+    private final AnswerGeneratorService answerGeneratorService;
 
     public ChatController(ChatSessionRepository chatSessionRepository,
                           ChatMessageRepository chatMessageRepository,
-                          UserRepository userRepository) {
+                          UserRepository userRepository,
+                          AnswerCitationRepository answerCitationRepository,
+                          AnswerGeneratorService answerGeneratorService) {
         this.chatSessionRepository = chatSessionRepository;
         this.chatMessageRepository = chatMessageRepository;
         this.userRepository = userRepository;
+        this.answerCitationRepository = answerCitationRepository;
+        this.answerGeneratorService = answerGeneratorService;
     }
 
     @PostMapping("/sessions")
@@ -119,20 +144,18 @@ public class ChatController {
         session.setUpdatedAt(LocalDateTime.now());
         chatSessionRepository.save(session);
 
-        ChatMessage assistantMessage = new ChatMessage();
-        assistantMessage.setSession(session);
-        assistantMessage.setRole("ASSISTANT");
-        assistantMessage.setContent("This is a stub answer for development. LLM not yet wired. Your question was: " + content.trim());
-        assistantMessage.setModelName("stub");
-        assistantMessage.setConfidence(0.0);
-        assistantMessage = chatMessageRepository.save(assistantMessage);
+        List<ChatMessage> history = new ArrayList<>(chatMessageRepository.findBySessionIdOrderByCreatedAt(sessionId));
+        AnswerGeneratorService.GeneratedAnswer generatedAnswer =
+            answerGeneratorService.generate(session, content.trim(), history);
+        ChatMessage assistantMessage = persistMessageIfNeeded(generatedAnswer.assistantMessage());
+        List<AnswerCitation> citations = persistCitationsIfNeeded(assistantMessage, generatedAnswer.citations());
 
         session.setUpdatedAt(LocalDateTime.now());
         chatSessionRepository.save(session);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("user", toMessageMap(userMessage));
-        response.put("answer", toMessageMap(assistantMessage));
+        response.put("user", toMessageMap(userMessage, List.of()));
+        response.put("answer", toMessageMap(assistantMessage, citations));
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
@@ -154,32 +177,34 @@ public class ChatController {
             messages = messages.subList(messages.size() - limit, messages.size());
         }
 
+        Map<Long, List<AnswerCitation>> citationsByMessageId = citationsByMessageId(messages);
         return ResponseEntity.ok(
             messages.stream()
-                .map(this::toMessageMap)
+                .map(message -> toMessageMap(message, citationsByMessageId.getOrDefault(message.getId(), List.of())))
                 .collect(Collectors.toList())
         );
     }
 
     @PostMapping("/answer")
-    public ResponseEntity<Map<String, Object>> answer(@RequestBody Map<String, Object> request) {
+    @Transactional(readOnly = true)
+    public ResponseEntity<Map<String, Object>> answer(@RequestBody Map<String, Object> request,
+                                                      Authentication authentication) {
         String content = readNullableString(request.get("content"));
         if (content == null || content.isBlank()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(error("Message content is required"));
         }
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("id", "stub-answer-" + UUID.randomUUID());
-        response.put("role", "assistant");
-        response.put("sessionId", null);
-        response.put("content", "This is a stub answer for development. LLM not yet wired. Your question was: " + content.trim());
-        response.put("modelName", "stub");
-        response.put("confidence", 0.0);
-        response.put("citations", Collections.emptyList());
-        response.put("suggestedFollowUps", Collections.emptyList());
-        response.put("createdAt", LocalDateTime.now());
-        return ResponseEntity.ok(response);
+        User currentUser = currentUser(authentication);
+        ChatSession syntheticSession = new ChatSession();
+        syntheticSession.setScopeType(resolveScopeType(request));
+        syntheticSession.setScopeId(resolveScopeId(request));
+        syntheticSession.setCreatedBy(currentUser);
+
+        AnswerGeneratorService.GeneratedAnswer generatedAnswer =
+            answerGeneratorService.generateSingleShot(syntheticSession, content.trim(), List.of());
+
+        return ResponseEntity.ok(toMessageMap(generatedAnswer.assistantMessage(), generatedAnswer.citations()));
     }
 
     private User currentUser(Authentication authentication) {
@@ -251,6 +276,49 @@ public class ChatController {
         }
     }
 
+    private ChatMessage persistMessageIfNeeded(ChatMessage message) {
+        if (message.getId() != null) {
+            return message;
+        }
+        return chatMessageRepository.save(message);
+    }
+
+    private List<AnswerCitation> persistCitationsIfNeeded(ChatMessage message, List<AnswerCitation> citations) {
+        if (citations.isEmpty() || !"ASSISTANT".equalsIgnoreCase(message.getRole())) {
+            return citations;
+        }
+        if (citations.stream().allMatch(citation -> citation.getId() != null)) {
+            return citations;
+        }
+
+        List<AnswerCitation> toPersist = new ArrayList<>();
+        for (AnswerCitation citation : citations) {
+            citation.setMessage(message);
+            toPersist.add(citation);
+        }
+        return answerCitationRepository.saveAll(toPersist);
+    }
+
+    private Map<Long, List<AnswerCitation>> citationsByMessageId(List<ChatMessage> messages) {
+        List<Long> messageIds = messages.stream()
+            .map(ChatMessage::getId)
+            .filter(id -> id != null)
+            .toList();
+        if (messageIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Long, List<AnswerCitation>> citations = new LinkedHashMap<>();
+        for (AnswerCitation citation : answerCitationRepository.findByMessageIdIn(messageIds)) {
+            Long messageId = citation.getMessage() != null ? citation.getMessage().getId() : null;
+            if (messageId == null) {
+                continue;
+            }
+            citations.computeIfAbsent(messageId, ignored -> new ArrayList<>()).add(citation);
+        }
+        return citations;
+    }
+
     private String deriveTitle(String content) {
         String normalized = content.trim().replaceAll("\\s+", " ");
         if (normalized.length() <= 60) {
@@ -285,19 +353,19 @@ public class ChatController {
         return scope;
     }
 
-    private Map<String, Object> toMessageMap(ChatMessage message) {
+    private Map<String, Object> toMessageMap(ChatMessage message, List<AnswerCitation> citations) {
         String role = message.getRole() == null ? "system" : message.getRole().toLowerCase(Locale.ROOT);
         Map<String, Object> map = new HashMap<>();
-        map.put("id", message.getId());
+        map.put("id", message.getId() != null ? message.getId() : "message-" + UUID.randomUUID());
         map.put("sessionId", message.getSession() != null ? message.getSession().getId() : null);
         map.put("role", role);
         map.put("content", message.getContent());
-        map.put("createdAt", message.getCreatedAt());
+        map.put("createdAt", message.getCreatedAt() != null ? message.getCreatedAt() : LocalDateTime.now());
 
         if ("assistant".equals(role)) {
             map.put("modelName", message.getModelName() != null ? message.getModelName() : "stub");
-            map.put("confidence", message.getConfidence() != null ? message.getConfidence() : 0.0);
-            map.put("citations", Collections.emptyList());
+            map.put("confidence", message.getConfidence());
+            map.put("citations", citations.stream().map(this::toCitationMap).collect(Collectors.toList()));
             map.put("suggestedFollowUps", Collections.emptyList());
         }
 
@@ -305,6 +373,24 @@ public class ChatController {
             map.put("variant", message.getVariant() != null ? message.getVariant() : "info");
         }
 
+        return map;
+    }
+
+    private Map<String, Object> toCitationMap(AnswerCitation citation) {
+        Map<String, Object> map = new HashMap<>();
+        Document document = citation.getDocument();
+        DocumentChunk chunk = citation.getChunk();
+        Project project = document != null ? document.getProject() : null;
+
+        map.put("id", citation.getId());
+        map.put("documentId", document != null ? document.getId() : null);
+        map.put("chunkId", chunk != null ? chunk.getId() : null);
+        map.put("projectId", project != null ? project.getId() : null);
+        map.put("projectName", project != null ? project.getName() : null);
+        map.put("documentTitle", document != null ? document.getTitle() : null);
+        map.put("quoteText", citation.getQuoteText());
+        map.put("pageNumber", chunk != null ? chunk.getPageNumber() : null);
+        map.put("relevanceScore", citation.getRelevanceScore() != null ? citation.getRelevanceScore() : 0.0);
         return map;
     }
 

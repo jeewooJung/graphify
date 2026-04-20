@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface AnswerCitationRepository extends JpaRepository<AnswerCitation, Long> {
     List<AnswerCitation> findByMessageId(Long messageId);
+
+    List<AnswerCitation> findByMessageIdIn(List<Long> messageIds);
 }

@@ -1,0 +1,65 @@
+package com.graphify.backend.service.chat;
+
+import com.graphify.backend.entity.Document;
+import org.springframework.stereotype.Service;
+
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+@Service
+public class CitationParser {
+    private static final Pattern SOURCE_MARKER_PATTERN = Pattern.compile("(?i)(sources|출처)\\s*:");
+
+    public record ParsedAnswer(String content, List<Long> citedDocumentIds) {}
+
+    public ParsedAnswer parse(String rawAnswer, List<Document> includedDocuments) {
+        if (rawAnswer == null || rawAnswer.isBlank()) {
+            return new ParsedAnswer("", List.of());
+        }
+
+        Matcher matcher = SOURCE_MARKER_PATTERN.matcher(rawAnswer);
+        int lastMatchStart = -1;
+        int lastMatchEnd = -1;
+        while (matcher.find()) {
+            lastMatchStart = matcher.start();
+            lastMatchEnd = matcher.end();
+        }
+
+        if (lastMatchStart < 0 || lastMatchEnd < 0) {
+            return new ParsedAnswer(rawAnswer.trim(), List.of());
+        }
+
+        String sourcesTail = rawAnswer.substring(lastMatchEnd).trim();
+        Set<Long> citedDocumentIds = new LinkedHashSet<>();
+        for (String entry : sourcesTail.split(",")) {
+            String normalizedEntry = entry.trim().toLowerCase(Locale.ROOT);
+            if (normalizedEntry.isBlank()) {
+                continue;
+            }
+            for (Document document : includedDocuments) {
+                if (document == null || document.getId() == null || document.getTitle() == null || document.getTitle().isBlank()) {
+                    continue;
+                }
+
+                String normalizedTitle = document.getTitle().trim().toLowerCase(Locale.ROOT);
+                if (normalizedEntry.contains(normalizedTitle) || normalizedTitle.contains(normalizedEntry)) {
+                    citedDocumentIds.add(document.getId());
+                }
+            }
+        }
+
+        int lineEndIndex = rawAnswer.indexOf('\n', lastMatchStart);
+        String strippedContent;
+        if (lineEndIndex < 0) {
+            strippedContent = rawAnswer.substring(0, lastMatchStart);
+        } else {
+            strippedContent = rawAnswer.substring(0, lastMatchStart) + rawAnswer.substring(lineEndIndex + 1);
+        }
+
+        return new ParsedAnswer(strippedContent.trim(), List.copyOf(citedDocumentIds));
+    }
+}

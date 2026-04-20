@@ -22,6 +22,8 @@ docs/superpowers/
 
 # Java/Gradle
 backend/.gradle/
+backend/.gradle-user/
+backend/.gradle-user-home/
 backend/build/
 backend/bin/
 backend/out/

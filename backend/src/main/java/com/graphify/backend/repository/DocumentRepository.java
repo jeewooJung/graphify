@@ -12,5 +12,7 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
 
     List<Document> findByProjectIdAndStatusIn(Long projectId, List<String> statuses);
 
+    List<Document> findByStatusIn(List<String> statuses);
+
     long countByProjectId(Long projectId);
 }
