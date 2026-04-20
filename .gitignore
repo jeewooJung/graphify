@@ -23,6 +23,8 @@ docs/superpowers/
 # Java/Gradle
 backend/.gradle/
 backend/build/
+backend/bin/
+backend/out/
 backend/.classpath
 backend/.project
 backend/.settings/
