@@ -14,6 +14,10 @@ describe('API Client', () => {
       const mockData = { data: 'test' }
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
+        headers: {
+          get: (key: string) =>
+            key === 'content-type' ? 'application/json' : null,
+        },
         json: async () => mockData,
       })
 
@@ -29,6 +33,11 @@ describe('API Client', () => {
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
         status: 404,
+        statusText: 'Not Found',
+        headers: {
+          get: (key: string) =>
+            key === 'content-type' ? 'application/json' : null,
+        },
         json: async () => ({ message: errorMessage }),
       })
 
@@ -54,6 +63,10 @@ describe('API Client', () => {
     it('should call apiCall with correct method for GET', async () => {
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
+        headers: {
+          get: (key: string) =>
+            key === 'content-type' ? 'application/json' : null,
+        },
         json: async () => ({}),
       })
 
@@ -66,6 +79,10 @@ describe('API Client', () => {
     it('should call apiCall with correct method for POST', async () => {
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
+        headers: {
+          get: (key: string) =>
+            key === 'content-type' ? 'application/json' : null,
+        },
         json: async () => ({}),
       })
 
@@ -78,6 +95,10 @@ describe('API Client', () => {
     it('should call apiCall with correct method for PUT', async () => {
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
+        headers: {
+          get: (key: string) =>
+            key === 'content-type' ? 'application/json' : null,
+        },
         json: async () => ({}),
       })
 
@@ -90,6 +111,10 @@ describe('API Client', () => {
     it('should call apiCall with correct method for DELETE', async () => {
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
+        headers: {
+          get: (key: string) =>
+            key === 'content-type' ? 'application/json' : null,
+        },
         json: async () => ({}),
       })
 
