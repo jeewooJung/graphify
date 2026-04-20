@@ -10,9 +10,19 @@ export interface Permission {
   createdDate: string
 }
 
+type PermissionRecord = {
+  id: string | number
+  role: string
+  resource: string
+  action: string
+  description: string
+  grantedTo?: string[]
+  createdDate?: string
+}
+
 export const permissionService = {
   async getPermissions() {
-    const response = await api.get<any[]>('/permissions')
+    const response = await api.get<PermissionRecord[]>('/permissions')
 
     if (response.error || !response.data) {
       return {

@@ -11,6 +11,17 @@ export interface SearchResult {
   graphId?: string
 }
 
+type SearchResultRecord = {
+  id: string | number
+  title: string
+  description?: string
+  type: SearchResult['type']
+  connections?: number | string
+  lastUpdated?: string
+  color?: string
+  graphId?: string | number
+}
+
 export const searchService = {
   // Global search across all graphs
   async search(query: string, filters?: {
@@ -25,7 +36,7 @@ export const searchService = {
     if (filters?.limit) params.append('limit', filters.limit.toString())
 
     const endpoint = `/search?${params.toString()}`
-    const response = await api.get<any[]>(endpoint)
+    const response = await api.get<SearchResultRecord[]>(endpoint)
 
     if (response.error || !response.data) {
       return {

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useRef, useState, useEffect } from 'react'
-import { Canvas, useThree } from '@react-three/fiber'
+import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import { graphService } from '@/lib/api/graph-service'
@@ -101,45 +101,33 @@ function Edges({ nodes, edges }: { nodes: GraphNode[]; edges: GraphEdge[] }) {
   return <>{lines}</>
 }
 
-// Camera controller
-function CameraController() {
-  const { camera } = useThree()
-
-  React.useEffect(() => {
-    camera.position.z = 12
-    camera.lookAt(0, 0, 0)
-  }, [camera])
-
-  return null
-}
-
 export function GraphCanvas({ graphId, selectedNodeId, onSelectNode }: GraphCanvasProps) {
   const [nodes, setNodes] = useState<GraphNode[]>(SAMPLE_NODES)
   const [edges, setEdges] = useState<GraphEdge[]>(SAMPLE_EDGES)
-  const [loading, setLoading] = useState(!!graphId)
+  const [isFetching, setIsFetching] = useState(() => !!graphId)
   const [error, setError] = useState('')
+  const loading = !!graphId && isFetching
 
   // Fetch graph data from API
   useEffect(() => {
     if (!graphId) {
-      setLoading(false)
       return
     }
 
     const fetchData = async () => {
-      setLoading(true)
+      setIsFetching(true)
       setError('')
 
       // Fetch nodes
       const nodesResponse = await graphService.getNodes(graphId)
       if (nodesResponse.error) {
         setError(nodesResponse.error)
-        setLoading(false)
+        setIsFetching(false)
         return
       }
 
       // Transform API data to Three.js format
-      const transformedNodes = (nodesResponse.data || []).map((node: any, index: number) => ({
+      const transformedNodes = (nodesResponse.data || []).map((node, index) => ({
         id: node.id,
         x: Math.cos((index / Math.max(nodesResponse.data?.length || 5, 5)) * Math.PI * 2) * 3,
         y: Math.sin((index / Math.max(nodesResponse.data?.length || 5, 5)) * Math.PI * 2) * 3,
@@ -156,7 +144,7 @@ export function GraphCanvas({ graphId, selectedNodeId, onSelectNode }: GraphCanv
         setEdges(edgesResponse.data || SAMPLE_EDGES)
       }
 
-      setLoading(false)
+      setIsFetching(false)
     }
 
     fetchData()
@@ -179,8 +167,14 @@ export function GraphCanvas({ graphId, selectedNodeId, onSelectNode }: GraphCanv
   }
 
   return (
-    <Canvas camera={{ position: [0, 0, 12], fov: 50 }} dpr={[1, 1.5]}>
-      <CameraController />
+    <Canvas
+      camera={{ position: [0, 0, 12], fov: 50 }}
+      dpr={[1, 1.5]}
+      onCreated={({ camera }) => {
+        camera.position.set(0, 0, 12)
+        camera.lookAt(0, 0, 0)
+      }}
+    >
       <ambientLight intensity={0.6} />
       <pointLight position={[10, 10, 10]} intensity={0.8} />
 

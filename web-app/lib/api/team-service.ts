@@ -19,6 +19,17 @@ export interface Team {
   createdDate: string
 }
 
+type TeamMemberRecord = {
+  userId?: string | number
+  id?: string | number
+  displayName?: string
+  username?: string
+  email: string
+  role?: string
+  joinedAt?: string
+  status?: string
+}
+
 export const teamService = {
   async getTeam(teamId?: string) {
     const endpoint = teamId ? `/teams/${teamId}` : '/teams/current'
@@ -27,7 +38,7 @@ export const teamService = {
 
   async getMembers(teamId?: string) {
     const endpoint = teamId ? `/teams/${teamId}/members` : '/teams/current/members'
-    const response = await api.get<any[]>(endpoint)
+    const response = await api.get<TeamMemberRecord[]>(endpoint)
 
     if (response.error || !response.data) {
       return {

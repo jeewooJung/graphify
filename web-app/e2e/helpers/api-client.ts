@@ -1,4 +1,4 @@
-import { APIRequestContext } from '@playwright/test';
+import { APIRequestContext, APIResponse } from '@playwright/test';
 import { API_BASE_URL } from './test-data';
 
 /**
@@ -31,47 +31,40 @@ export class ApiClient {
     return `${API_BASE_URL}${path}`;
   }
 
+  private async parseJson<T>(response: APIResponse): Promise<T> {
+    try {
+      return (await response.json()) as T;
+    } catch {
+      return null as unknown as T;
+    }
+  }
+
   async get<T>(path: string): Promise<{ status: number; data: T }> {
     const response = await this.request.get(this.buildUrl(path), {
       headers: this.getHeaders(),
     });
 
-    let data: any;
-    try {
-      data = await response.json();
-    } catch {
-      data = null;
-    }
+    const data = await this.parseJson<T>(response);
     return { status: response.status(), data };
   }
 
-  async post<T>(path: string, body: any): Promise<{ status: number; data: T }> {
+  async post<T>(path: string, body: Record<string, unknown>): Promise<{ status: number; data: T }> {
     const response = await this.request.post(this.buildUrl(path), {
       headers: this.getHeaders(),
       data: body,
     });
 
-    let data: any;
-    try {
-      data = await response.json();
-    } catch {
-      data = null;
-    }
+    const data = await this.parseJson<T>(response);
     return { status: response.status(), data };
   }
 
-  async put<T>(path: string, body: any): Promise<{ status: number; data: T }> {
+  async put<T>(path: string, body: Record<string, unknown>): Promise<{ status: number; data: T }> {
     const response = await this.request.put(this.buildUrl(path), {
       headers: this.getHeaders(),
       data: body,
     });
 
-    let data: any;
-    try {
-      data = await response.json();
-    } catch {
-      data = null;
-    }
+    const data = await this.parseJson<T>(response);
     return { status: response.status(), data };
   }
 
@@ -80,13 +73,7 @@ export class ApiClient {
       headers: this.getHeaders(),
     });
 
-    let data;
-    try {
-      data = await response.json();
-    } catch {
-      data = null;
-    }
-
+    const data = await this.parseJson<T>(response);
     return { status: response.status(), data };
   }
 
@@ -111,7 +98,7 @@ export class ApiClient {
     });
   }
 
-  async validateToken(token: string): Promise<{ status: number; data: any }> {
+  async validateToken(token: string): Promise<{ status: number; data: Record<string, unknown> }> {
     return this.request
       .get(`${API_BASE_URL}/auth/validate`, {
         headers: {
@@ -120,7 +107,7 @@ export class ApiClient {
       })
       .then(async (response) => ({
         status: response.status(),
-        data: await response.json(),
+        data: await this.parseJson<Record<string, unknown>>(response),
       }));
   }
 }

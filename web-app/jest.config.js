@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- Next.js documents jest.config.js with CommonJS next/jest bootstrap.
 const nextJest = require('next/jest')
 
 const createJestConfig = nextJest({

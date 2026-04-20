@@ -4,7 +4,9 @@ import { TeamList } from '../TeamList'
 
 // Mock the Badge component
 jest.mock('@/components/ui', () => ({
-  Badge: ({ children, ...props }: any) => <span {...props}>{children}</span>,
+  Badge: ({ children, ...props }: React.HTMLAttributes<HTMLSpanElement> & { children?: React.ReactNode }) => (
+    <span {...props}>{children}</span>
+  ),
 }))
 
 describe('TeamList', () => {

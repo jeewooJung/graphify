@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks -- Playwright fixture callbacks use a "use" parameter that collides with React hook linting. */
 import { test as base, expect } from '@playwright/test';
 import { ApiClient } from '../helpers/api-client';
 import { TEST_USERS } from '../helpers/test-data';

@@ -12,6 +12,19 @@ interface ApiResponse<T> {
 
 const API_BASE_URL = '/api/backend'
 
+function extractErrorMessage(data: unknown, status: number): string {
+  if (
+    typeof data === 'object' &&
+    data !== null &&
+    'message' in data &&
+    typeof data.message === 'string'
+  ) {
+    return data.message
+  }
+
+  return `API Error: ${status}`
+}
+
 export async function apiCall<T>(
   endpoint: string,
   options: FetchOptions = {}
@@ -30,26 +43,26 @@ export async function apiCall<T>(
     })
 
     const contentType = response.headers.get('content-type') || ''
-    const data = contentType.includes('application/json')
+    const data: unknown = contentType.includes('application/json')
       ? await response.json()
       : await response.text()
 
     if (!response.ok) {
       return {
-        data: null as any,
-        error: (typeof data === 'object' && data?.message) || `API Error: ${response.status}`,
+        data: null as unknown as T,
+        error: extractErrorMessage(data, response.status),
         status: response.status,
       }
     }
 
     return {
-      data,
+      data: data as T,
       status: response.status,
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Network error'
     return {
-      data: null as any,
+      data: null as unknown as T,
       error: message,
       status: 0,
     }
@@ -59,9 +72,9 @@ export async function apiCall<T>(
 // Convenience methods
 export const api = {
   get: <T,>(endpoint: string) => apiCall<T>(endpoint, { method: 'GET' }),
-  post: <T,>(endpoint: string, body: any) =>
+  post: <T, TBody = unknown>(endpoint: string, body: TBody) =>
     apiCall<T>(endpoint, { method: 'POST', body: JSON.stringify(body) }),
-  put: <T,>(endpoint: string, body: any) =>
+  put: <T, TBody = unknown>(endpoint: string, body: TBody) =>
     apiCall<T>(endpoint, { method: 'PUT', body: JSON.stringify(body) }),
   delete: <T,>(endpoint: string) => apiCall<T>(endpoint, { method: 'DELETE' }),
 }

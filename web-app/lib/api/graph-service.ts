@@ -6,7 +6,7 @@ export interface GraphNode {
   type: 'entity' | 'concept' | 'relation'
   description?: string
   color?: string
-  properties?: Record<string, any>
+  properties?: Record<string, unknown>
   connections?: number
 }
 
