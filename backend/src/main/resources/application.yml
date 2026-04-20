@@ -79,8 +79,9 @@ graphify:
     root: ${GRAPHIFY_STORAGE_ROOT:./storage}
   ollama:
     base-url: ${OLLAMA_BASE_URL:http://172.30.0.22:8080}
-    model: ${OLLAMA_MODEL:glm-4.7-flash}
+    model: ${OLLAMA_MODEL:gemma3:27b}
     timeout-seconds: 60
   chat:
     max-context-chars: 100000
     max-documents-per-answer: 20
+    history-turns: 5

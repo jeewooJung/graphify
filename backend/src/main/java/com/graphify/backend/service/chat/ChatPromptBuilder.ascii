@@ -118,7 +118,6 @@ public class ChatPromptBuilder {
             .sorted(Comparator.comparing(DocumentChunk::getChunkIndex, Comparator.nullsLast(Integer::compareTo)))
             .toList();
 
-        boolean appendedChunkContent = false;
         if (safeChunks.isEmpty()) {
             builder.append(fallbackDocumentText(document)).append('\n');
         } else {
@@ -127,11 +126,7 @@ public class ChatPromptBuilder {
                     continue;
                 }
                 builder.append(chunk.getContent()).append('\n');
-                appendedChunkContent = true;
             }
-        }
-        if (!appendedChunkContent && !safeChunks.isEmpty()) {
-            builder.append(fallbackDocumentText(document)).append('\n');
         }
 
         builder.append("=== End Document ")
