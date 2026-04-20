@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -36,6 +37,7 @@ public class ChatController {
     }
 
     @PostMapping("/sessions")
+    @Transactional
     public ResponseEntity<Map<String, Object>> createSession(@RequestBody Map<String, Object> request,
                                                              Authentication authentication) {
         User currentUser = currentUser(authentication);
@@ -51,6 +53,7 @@ public class ChatController {
     }
 
     @GetMapping("/sessions")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<Map<String, Object>>> listSessions(@RequestParam(name = "scopeType", required = false) String scopeType,
                                                                   @RequestParam(name = "scopeId", required = false) Long scopeId,
                                                                   @RequestParam(name = "limit", defaultValue = "20") Integer limit,
@@ -77,6 +80,7 @@ public class ChatController {
     }
 
     @GetMapping("/sessions/{sessionId}")
+    @Transactional(readOnly = true)
     public ResponseEntity<Map<String, Object>> getSession(@PathVariable Long sessionId) {
         ChatSession session = chatSessionRepository.findById(sessionId).orElse(null);
         if (session == null) {
@@ -88,6 +92,7 @@ public class ChatController {
     }
 
     @PostMapping("/sessions/{sessionId}/messages")
+    @Transactional
     public ResponseEntity<Map<String, Object>> postMessage(@PathVariable Long sessionId,
                                                            @RequestBody Map<String, Object> request) {
         ChatSession session = chatSessionRepository.findById(sessionId).orElse(null);
@@ -132,6 +137,7 @@ public class ChatController {
     }
 
     @GetMapping("/sessions/{sessionId}/messages")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<Map<String, Object>>> getMessages(@PathVariable Long sessionId,
                                                                  @RequestParam(name = "before", required = false) String before,
                                                                  @RequestParam(name = "limit", defaultValue = "50") Integer limit) {

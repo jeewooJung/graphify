@@ -12,6 +12,7 @@ import com.graphify.backend.security.UserPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -79,6 +80,7 @@ public class DocumentController {
     }
 
     @GetMapping("/projects/{projectId}/documents")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<Map<String, Object>>> listDocuments(@PathVariable Long projectId,
                                                                    @RequestParam(name = "status", required = false) List<String> statusParams,
                                                                    @RequestParam(name = "statuses", required = false) List<String> statusesParams,
@@ -112,6 +114,7 @@ public class DocumentController {
     }
 
     @GetMapping("/documents/{documentId}")
+    @Transactional(readOnly = true)
     public ResponseEntity<Map<String, Object>> getDocument(@PathVariable Long documentId) {
         Document document = documentRepository.findById(documentId).orElse(null);
         if (document == null) {
@@ -123,6 +126,7 @@ public class DocumentController {
     }
 
     @GetMapping("/documents/{documentId}/chunks")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<Map<String, Object>>> getDocumentChunks(@PathVariable Long documentId,
                                                                        @RequestParam(name = "limit", defaultValue = "10") Integer limit) {
         Document document = documentRepository.findById(documentId).orElse(null);
