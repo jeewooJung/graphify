@@ -2,6 +2,7 @@ import type { ComponentProps } from 'react'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ChatWelcomeState } from '@/components/chat/ChatWelcomeState'
+import { UserProvider } from '@/lib/auth/user-context'
 import type { ChatScope, ProjectOption, SuggestedQuestion, TeamOption } from '@/types/chat'
 
 const defaultScope: ChatScope = { kind: 'WORKSPACE' }
@@ -23,15 +24,24 @@ function renderWelcomeState(overrides?: Partial<ComponentProps<typeof ChatWelcom
   const onSubmit = jest.fn()
 
   render(
-    <ChatWelcomeState
-      defaultScope={defaultScope}
-      projects={projects}
-      teams={teams}
-      suggestions={suggestions}
-      isSubmitting={false}
-      onSubmit={onSubmit}
-      {...overrides}
-    />
+    <UserProvider
+      initialUser={{
+        id: 'user-1',
+        email: 'alex@example.com',
+        name: 'Alex',
+        role: 'admin',
+      }}
+    >
+      <ChatWelcomeState
+        defaultScope={defaultScope}
+        projects={projects}
+        teams={teams}
+        suggestions={suggestions}
+        isSubmitting={false}
+        onSubmit={onSubmit}
+        {...overrides}
+      />
+    </UserProvider>
   )
 
   return { onSubmit }

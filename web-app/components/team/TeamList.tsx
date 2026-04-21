@@ -2,16 +2,8 @@
 
 import React from 'react'
 import { Badge } from '@/components/ui'
+import type { TeamMember } from '@/lib/api/team-service'
 import { Trash2, Edit } from 'lucide-react'
-
-interface TeamMember {
-  id: string
-  name: string
-  email: string
-  role: 'admin' | 'editor' | 'viewer'
-  joinedDate: string
-  status: 'active' | 'inactive'
-}
 
 interface TeamListProps {
   members: TeamMember[]

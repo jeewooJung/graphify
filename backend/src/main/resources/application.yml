@@ -52,6 +52,10 @@ server:
   port: 8086
   servlet:
     context-path: /api
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
   error:
     include-message: always
     include-binding-errors: always
@@ -78,7 +82,7 @@ graphify:
   storage:
     root: ${GRAPHIFY_STORAGE_ROOT:./storage}
   ollama:
-    base-url: ${OLLAMA_BASE_URL:http://172.30.0.22:8080}
+    base-url: ${OLLAMA_BASE_URL:http://172.30.0.29:8080}
     model: ${OLLAMA_MODEL:gemma3:27b}
     timeout-seconds: 60
   chat:

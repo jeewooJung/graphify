@@ -1,48 +1,95 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button, PageHeader } from '@/components/ui'
+import { Button, ConfirmDialog, PageHeader } from '@/components/ui'
 import { ProjectList } from '@/components/project/ProjectList'
-import { projectService } from '@/lib/api/project-service'
+import { ProjectModal } from '@/components/project/ProjectModal'
+import { projectService, type Project } from '@/lib/api/project-service'
 import { ROUTES } from '@/lib/routes'
 import { Plus } from 'lucide-react'
-
-interface Project {
-  id: string
-  name: string
-  description: string
-  owner: string
-  memberCount: number
-  graphCount: number
-  createdDate: string
-  lastModified: string
-  status: 'active' | 'archived'
-}
 
 export default function ProjectsPage() {
   const router = useRouter()
   const [projects, setProjects] = useState<Project[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [projectModal, setProjectModal] = useState<
+    { mode: 'create' } | { mode: 'edit'; project: Project } | null
+  >(null)
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null)
 
-  useEffect(() => {
-    const fetchProjects = async () => {
-      setLoading(true)
-      const response = await projectService.getProjects()
+  const loadProjects = useCallback(async () => {
+    const response = await projectService.getProjects()
 
-      if (response.error) {
-        setProjects([])
-        setError(response.error)
-      } else {
-        setProjects(response.data || [])
-        setError('')
-      }
-      setLoading(false)
+    if (response.error) {
+      setProjects([])
+      setError(response.error)
+    } else {
+      setProjects(response.data || [])
+      setError('')
     }
 
-    fetchProjects()
+    setLoading(false)
   }, [])
+
+  const reloadProjects = useCallback(async () => {
+    setLoading(true)
+    await loadProjects()
+  }, [loadProjects])
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadProjects()
+    }, 0)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [loadProjects])
+
+  const openEditModal = (projectId: string) => {
+    const project = projects.find((item) => item.id === projectId)
+    if (!project) return
+
+    setProjectModal({ mode: 'edit', project })
+  }
+
+  const openDeleteDialog = (projectId: string) => {
+    const project = projects.find((item) => item.id === projectId)
+    if (!project) return
+
+    setProjectToDelete(project)
+  }
+
+  const handleProjectSubmit = async (values: { name: string; description: string }) => {
+    const response = projectModal?.mode === 'edit'
+      ? await projectService.updateProject(projectModal.project.id, values)
+      : await projectService.createProject(values)
+
+    if (response.error) {
+      setError(response.error)
+      return
+    }
+
+    setError('')
+    await reloadProjects()
+    setProjectModal(null)
+  }
+
+  const handleDeleteProject = async () => {
+    if (!projectToDelete) return
+
+    const response = await projectService.deleteProject(projectToDelete.id)
+    if (response.error) {
+      setError(response.error)
+      return
+    }
+
+    setError('')
+    await reloadProjects()
+    setProjectToDelete(null)
+  }
 
   return (
     <div className="page-shell">
@@ -57,7 +104,7 @@ export default function ProjectsPage() {
           </>
         }
         actions={(
-          <Button variant="primary">
+          <Button variant="primary" onClick={() => setProjectModal({ mode: 'create' })}>
             <Plus size={16} />
             New project
           </Button>
@@ -75,10 +122,30 @@ export default function ProjectsPage() {
           projects={projects}
           loading={loading}
           onViewProject={(id) => router.push(ROUTES.project(id))}
-          onEditProject={(id) => console.log('Edit project', id)}
-          onDeleteProject={(id) => console.log('Delete project', id)}
+          onEditProject={openEditModal}
+          onDeleteProject={openDeleteDialog}
+          onCreateProject={() => setProjectModal({ mode: 'create' })}
         />
       </div>
+
+      <ProjectModal
+        open={projectModal !== null}
+        project={projectModal?.mode === 'edit' ? projectModal.project : undefined}
+        onCancel={() => setProjectModal(null)}
+        onSubmit={handleProjectSubmit}
+      />
+
+      <ConfirmDialog
+        open={projectToDelete !== null}
+        title="Archive project"
+        message={projectToDelete
+          ? `Archive ${projectToDelete.name}? Archived projects are hidden from the active list.`
+          : ''}
+        confirmLabel="Archive project"
+        destructive
+        onConfirm={handleDeleteProject}
+        onCancel={() => setProjectToDelete(null)}
+      />
     </div>
   )
 }

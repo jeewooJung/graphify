@@ -1,7 +1,6 @@
 'use client'
 
 import clsx from 'clsx'
-import { Badge } from '@/components/ui'
 import type { ChatSessionSummary } from '@/types/chat'
 
 type ChatSessionListItemProps = {
@@ -31,16 +30,21 @@ export function ChatSessionListItem({ session, isActive, onClick }: ChatSessionL
         type="button"
         onClick={onClick}
         className={clsx(
-          'w-full rounded-2xl border p-3 text-left transition-colors',
-          isActive ? 'border-primary-500 bg-primary-50/70' : 'border-border bg-white hover:bg-surface-hover'
+          'relative w-full cursor-pointer rounded-lg border px-2.5 py-2 text-left transition-colors',
+          isActive
+            ? 'border-[rgba(79,110,247,0.2)] bg-primary-soft'
+            : 'border-[var(--border-subtle)] bg-white/60 hover:border-[var(--border-strong)] hover:bg-white'
         )}
       >
-        <div className="flex items-start justify-between gap-3">
-          <p className="line-clamp-2 text-sm font-medium text-text-primary">{session.title}</p>
-          <span className="shrink-0 text-xs text-text-tertiary">{formatRelativeTime(session.lastMessageAt)}</span>
-        </div>
-        <div className="mt-3 flex items-center gap-2">
-          <Badge variant={isActive ? 'primary' : 'default'}>{session.scope.kind}</Badge>
+        {isActive && (
+          <span
+            className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-primary-500"
+            aria-hidden="true"
+          />
+        )}
+        <div className="flex items-start justify-between gap-2">
+          <p className="line-clamp-1 text-[13px] font-medium text-text-primary">{session.title}</p>
+          <span className="shrink-0 text-[10px] text-text-tertiary">{formatRelativeTime(session.lastMessageAt)}</span>
         </div>
       </button>
     </li>

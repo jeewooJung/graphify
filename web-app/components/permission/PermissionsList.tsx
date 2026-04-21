@@ -2,17 +2,8 @@
 
 import React from 'react'
 import { Badge } from '@/components/ui'
+import type { Permission } from '@/lib/api/permission-service'
 import { Edit, Trash2 } from 'lucide-react'
-
-interface Permission {
-  id: string
-  role: string
-  resource: string
-  action: string
-  description: string
-  grantedTo: string[]
-  createdDate: string
-}
 
 interface PermissionsListProps {
   permissions: Permission[]

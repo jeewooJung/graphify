@@ -111,8 +111,8 @@ export function ChatLayout({
         data-session-id={sessionId}
         data-scope-kind={scope?.kind}
         className={clsx(
-          'grid min-h-0 gap-4',
-          rightSlot ? 'md:grid-cols-[280px,minmax(0,1fr),360px]' : 'md:grid-cols-[280px,minmax(0,1fr)]'
+          'grid min-h-0 gap-3',
+          rightSlot ? 'md:grid-cols-[auto,minmax(0,1fr),360px]' : 'md:grid-cols-[auto,minmax(0,1fr)]'
         )}
       >
         <div className="min-w-0">{leftSlot}</div>

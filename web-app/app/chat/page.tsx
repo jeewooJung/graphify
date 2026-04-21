@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChatLayout, ChatSessionList, ChatWelcomeState } from '@/components/chat'
 import { chatService } from '@/lib/api/chat-service'
+import { projectService } from '@/lib/api/project-service'
+import { teamService } from '@/lib/api/team-service'
 import { useUser } from '@/lib/auth/user-context'
 import { ROUTES } from '@/lib/routes'
 import type {
@@ -14,15 +16,6 @@ import type {
   SuggestedQuestion,
   TeamOption,
 } from '@/types/chat'
-
-const mockProjects: ProjectOption[] = [
-  { id: 'proj-1', name: 'Acme Wiki' },
-  { id: 'proj-2', name: 'Launch Notes' },
-]
-
-const mockTeams: TeamOption[] = [
-  { id: 'team-platform', name: 'Platform Team' },
-]
 
 const mockSuggestions: SuggestedQuestion[] = [
   { id: 'suggestion-1', text: '이번 주 프로젝트 변경 사항을 요약해줘' },
@@ -35,32 +28,47 @@ export default function ChatPage() {
   const router = useRouter()
   const { user } = useUser()
   const [sessions, setSessions] = useState<ChatSessionSummary[]>([])
+  const [projects, setProjects] = useState<ProjectOption[]>([])
+  const [teams, setTeams] = useState<TeamOption[]>([])
   const [isLoadingSessions, setIsLoadingSessions] = useState(true)
   const [sessionsError, setSessionsError] = useState<string>()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [composerKey, setComposerKey] = useState(0)
   const disabledKinds: ScopeKind[] = user?.role === 'viewer' ? ['TEAM', 'PROJECT'] : []
 
   useEffect(() => {
     let isActive = true
 
-    async function loadSessions() {
+    async function loadAll() {
       setIsLoadingSessions(true)
       setSessionsError(undefined)
 
-      const res = await chatService.getSessions({ limit: 10 })
+      const [sessionsRes, projectsRes, teamRes] = await Promise.all([
+        chatService.getSessions({ limit: 10 }),
+        projectService.getProjects(),
+        teamService.getTeam(),
+      ])
       if (!isActive) return
 
-      if (res.error) {
+      if (sessionsRes.error) {
         setSessions([])
-        setSessionsError(res.error)
+        setSessionsError(sessionsRes.error)
       } else {
-        setSessions(res.data ?? [])
+        setSessions(sessionsRes.data ?? [])
+      }
+
+      setProjects(
+        (projectsRes.data ?? []).map((p) => ({ id: p.id, name: p.name }))
+      )
+
+      if (teamRes.data) {
+        setTeams([{ id: String(teamRes.data.id), name: teamRes.data.name }])
       }
 
       setIsLoadingSessions(false)
     }
 
-    void loadSessions()
+    void loadAll()
 
     return () => {
       isActive = false
@@ -71,7 +79,9 @@ export default function ChatPage() {
     router.push(ROUTES.chatSession(id))
   }
 
-  const handleCreateSession = () => {}
+  const handleCreateSession = () => {
+    setComposerKey((k) => k + 1)
+  }
 
   const handleSubmit = async (input: ChatAnswerRequest) => {
     setIsSubmitting(true)
@@ -121,9 +131,10 @@ export default function ChatPage() {
         )}
       >
         <ChatWelcomeState
+          key={composerKey}
           defaultScope={{ kind: 'WORKSPACE' }}
-          projects={mockProjects}
-          teams={mockTeams}
+          projects={projects}
+          teams={teams}
           disabledKinds={disabledKinds}
           suggestions={mockSuggestions}
           isSubmitting={isSubmitting}

@@ -32,7 +32,15 @@ backend/.project
 backend/.settings/
 backend/*.iml
 backend/.idea/
+backend/.g-home/
+backend/.tmp/
+backend/BOOT-INF/
+backend/gradle-run2/
+backend/gradle-user-run/
+storage/
 .DS_Store
 /web-app/playwright-report/
 /.idea/
 /web-app/test-results/
+
+/.playwright-mcp/

@@ -1,5 +1,8 @@
 export { Button } from './Button'
 export { Input } from './Input'
+export { Field } from './Field'
+export { Modal } from './Modal'
+export { ConfirmDialog } from './ConfirmDialog'
 export { Card, CardHeader, CardTitle, CardContent } from './Card'
 export { Badge } from './Badge'
 export { PageHeader } from './PageHeader'

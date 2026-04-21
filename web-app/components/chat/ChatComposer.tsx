@@ -35,15 +35,15 @@ export function ChatComposer({
   }, [value])
 
   return (
-    <Card className="p-3">
-      <div className="flex items-end gap-3">
+    <Card className="p-4 transition-colors focus-within:border-[rgba(79,110,247,0.35)] focus-within:shadow-[0_0_0_3px_rgba(79,110,247,0.09)]">
+      <div className="flex flex-col gap-3">
         <textarea
           ref={textareaRef}
           rows={rows}
           value={value}
           placeholder={placeholder}
           disabled={disabled || isSubmitting}
-          className="input-field min-h-[44px] resize-none py-2.5"
+          className="min-h-[96px] w-full resize-none rounded-lg border border-transparent bg-transparent px-0 py-0 text-sm leading-6 text-text-primary placeholder:text-text-quaternary focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey) {
@@ -52,15 +52,21 @@ export function ChatComposer({
             }
           }}
         />
-        <Button
-          size="sm"
-          onClick={onSubmit}
-          disabled={!canSubmit}
-          aria-label="Send message"
-          title="Send message"
-        >
-          {isSubmitting ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/60 border-t-white" /> : 'Send'}
-        </Button>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[11px] text-text-quaternary">
+            <kbd className="rounded bg-[rgba(17,24,39,0.06)] px-1.5 py-0.5 font-medium">Enter</kbd> to send <span aria-hidden="true">&middot;</span>{' '}
+            <kbd className="rounded bg-[rgba(17,24,39,0.06)] px-1.5 py-0.5 font-medium">Shift</kbd> + <kbd className="rounded bg-[rgba(17,24,39,0.06)] px-1.5 py-0.5 font-medium">Enter</kbd> for new line
+          </p>
+          <Button
+            size="md"
+            onClick={onSubmit}
+            disabled={!canSubmit}
+            aria-label="Send message"
+            title="Send message"
+          >
+            {isSubmitting ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/60 border-t-white" /> : 'Send'}
+          </Button>
+        </div>
       </div>
     </Card>
   )

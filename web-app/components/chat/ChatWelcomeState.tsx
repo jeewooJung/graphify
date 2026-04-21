@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { ChatComposer } from './ChatComposer'
 import { ChatScopeSelector } from './ChatScopeSelector'
 import { SuggestedFollowUps } from './SuggestedFollowUps'
+import { useUser } from '@/lib/auth/user-context'
 import type {
   ChatAnswerRequest,
   ChatScope,
@@ -12,6 +13,19 @@ import type {
   SuggestedQuestion,
   TeamOption,
 } from '@/types/chat'
+
+function getGreeting(name?: string) {
+  const hour = new Date().getHours()
+  const prefix = hour < 5
+    ? 'Still up'
+    : hour < 12
+      ? 'Good morning'
+      : hour < 18
+        ? 'Good afternoon'
+        : 'Good evening'
+
+  return name ? `${prefix}, ${name}` : prefix
+}
 
 type ChatWelcomeStateProps = {
   defaultScope: ChatScope
@@ -34,8 +48,10 @@ export function ChatWelcomeState({
   error,
   onSubmit,
 }: ChatWelcomeStateProps) {
+  const { user } = useUser()
   const [scope, setScope] = useState<ChatScope>(defaultScope)
   const [draftText, setDraftText] = useState('')
+  const greeting = getGreeting(user?.name)
 
   const handleSubmit = () => {
     const content = draftText.trim()
@@ -48,13 +64,17 @@ export function ChatWelcomeState({
   }
 
   return (
-    <section className="mx-auto flex w-full max-w-[720px] flex-col gap-6">
-      <div className="space-y-2 text-center">
-        <h1 className="text-3xl font-semibold tracking-[-0.03em] text-text-primary">
-          Graphify Chat
+    <section className="mx-auto flex w-full max-w-[780px] flex-col gap-8">
+      <div className="space-y-3 text-center">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-white/80 px-3 py-1 text-xs font-medium text-text-secondary">
+          <span className="h-1.5 w-1.5 rounded-full bg-success-500" />
+          Ready to answer
+        </div>
+        <h1 className="text-[34px] font-semibold leading-[1.05] tracking-[-0.035em] text-text-primary">
+          {greeting}
         </h1>
-        <p className="text-sm text-text-secondary">
-          Ask questions across your workspace, team knowledge, or a specific project.
+        <p className="mx-auto max-w-[560px] text-sm text-text-secondary">
+          Ask questions across your workspace, team knowledge, or a specific project. Graphify grounds every answer in your own documents.
         </p>
       </div>
 

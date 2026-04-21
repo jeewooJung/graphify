@@ -40,6 +40,9 @@ dependencies {
     implementation 'io.hypersistence:hypersistence-utils-hibernate-63:3.7.0'
     implementation 'org.apache.tika:tika-core:2.9.2'
     implementation 'org.apache.tika:tika-parsers-standard-package:2.9.2'
+    implementation('technology.tabula:tabula:1.0.5') {
+        exclude group: 'org.slf4j', module: 'slf4j-simple'
+    }
 
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
